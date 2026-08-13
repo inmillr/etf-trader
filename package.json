@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
-    "backfill": "node --env-file=.env --import=tsx src/scripts/backfillHistoricalData.ts"
+    "backfill": "node --env-file=.env --import=tsx src/scripts/backfillHistoricalData.ts",
+    "backfill:universe": "node --env-file=.env --import=tsx src/scripts/backfillUniverse.ts",
+    "scan": "node --env-file=.env --import=tsx src/scripts/scanUniverse.ts"
   },
   "keywords": [],
   "author": "",
