@@ -17,11 +17,12 @@ const trigger =
 async function main() {
   if (
     job !== "signal" &&
+    job !== "backfill" &&
     job !== "trade-dry" &&
     job !== "trade-execute"
   ) {
     throw new Error(
-      "Usage: automationJob.ts <signal|trade-dry|trade-execute> [--trigger scheduled|manual]"
+      "Usage: automationJob.ts <backfill|signal|trade-dry|trade-execute> [--trigger scheduled|manual]"
     );
   }
 

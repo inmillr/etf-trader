@@ -267,6 +267,37 @@ export class StrategyDashboardService {
     }
   }
 
+  async getLatestDataDate(): Promise<string | null> {
+    const repository =
+      new SQLiteCandleRepository(
+        this.databasePath
+      );
+
+    try {
+      const candles =
+        await repository.getCandles({
+          symbol: "SPY",
+          timeframe: "1d",
+          start: new Date("2000-01-01T00:00:00.000Z"),
+          end: new Date()
+        });
+
+      if (!candles.length) {
+        return null;
+      }
+
+      const candlesBySymbol = new Map([
+        ["SPY", candles]
+      ]);
+
+      return findLatestTradingDay(
+        candlesBySymbol
+      );
+    } finally {
+      repository.close();
+    }
+  }
+
   async getBacktest(
     startString: string,
     endString: string,

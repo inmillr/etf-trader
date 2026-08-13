@@ -1,8 +1,7 @@
 import "dotenv/config";
 
 import {
-  AutomationService,
-  spawnAutomationJob
+  AutomationService
 } from "../services/AutomationService.js";
 import {
   StrategyDashboardService
@@ -114,87 +113,14 @@ async function main() {
       const automation =
         new AutomationService();
 
-      switch (action) {
-        case "enable": {
-          console.log(
-            JSON.stringify(
-              automation.setEnabled(true)
-            )
-          );
-          return;
-        }
+      const result =
+        await automation.runManualAction(
+          action
+        );
 
-        case "disable": {
-          console.log(
-            JSON.stringify(
-              automation.setEnabled(false)
-            )
-          );
-          return;
-        }
+      console.log(JSON.stringify(result));
 
-        case "start-daemon": {
-          console.log(
-            JSON.stringify(
-              automation.startDaemon()
-            )
-          );
-          return;
-        }
-
-        case "stop-daemon": {
-          console.log(
-            JSON.stringify(
-              automation.stopDaemon()
-            )
-          );
-          return;
-        }
-
-        case "run-signal": {
-          spawnAutomationJob("signal");
-
-          console.log(
-            JSON.stringify({
-              ...(await automation.getStatusWithMarket()),
-              accepted: true,
-              message: "Signal job started"
-            })
-          );
-          return;
-        }
-
-        case "run-trade-dry": {
-          spawnAutomationJob("trade-dry");
-
-          console.log(
-            JSON.stringify({
-              ...(await automation.getStatusWithMarket()),
-              accepted: true,
-              message: "Trade preview job started"
-            })
-          );
-          return;
-        }
-
-        case "run-trade-execute": {
-          spawnAutomationJob("trade-execute");
-
-          console.log(
-            JSON.stringify({
-              ...(await automation.getStatusWithMarket()),
-              accepted: true,
-              message: "Trade execute job started"
-            })
-          );
-          return;
-        }
-
-        default:
-          throw new Error(
-            `Unknown automation action: ${action}`
-          );
-      }
+      return;
     }
 
     default:

@@ -111,10 +111,17 @@ export interface AutomationStatusResponse {
     trade: string | null;
   };
   lastRuns: {
+    backfill: AutomationJobRun | null;
     signal: AutomationJobRun | null;
     trade: AutomationJobRun | null;
   };
   runLog: AutomationRunLogEntry[];
+  lastActionLog: {
+    at: string;
+    job: string;
+    success: boolean;
+    log: string[];
+  } | null;
   env: {
     paperTradingEnabled: boolean;
     alpacaPaper: boolean;
@@ -125,10 +132,22 @@ export interface AutomationStatusResponse {
     nextOpen: string | null;
     nextClose: string | null;
   } | null;
+  signalFreshness: {
+    latestDataDate: string | null;
+    lastSignalDate: string | null;
+    lastSignalRunAt: string | null;
+    isStale: boolean;
+    staleReason: string | null;
+    needsBackfill: boolean;
+    backfillHint: string | null;
+    canManualExecute: boolean;
+    manualExecuteHint: string | null;
+  } | null;
 }
 
 export interface AutomationControlResponse
   extends AutomationStatusResponse {
-  accepted?: boolean;
+  actionLog?: string[];
+  success?: boolean;
   message?: string;
 }

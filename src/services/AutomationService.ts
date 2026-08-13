@@ -2,11 +2,11 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 
 import {
-  AlpacaTradingClient
-} from "../broker/AlpacaTradingClient.js";
-import {
-  PaperTradingRunner
-} from "../broker/PaperTradingRunner.js";
+  buildBackfillActionLog,
+  buildControlActionLog,
+  buildSignalActionLog,
+  buildTradeActionLog
+} from "../automation/AutomationActionLog.js";
 import {
   isJobDue,
   nextScheduledRun
@@ -22,10 +22,28 @@ import type {
   AutomationStatusResponse,
   AutomationTrigger
 } from "../automation/AutomationTypes.js";
+import {
+  AlpacaTradingClient
+} from "../broker/AlpacaTradingClient.js";
+import {
+  PaperTradingRunner
+} from "../broker/PaperTradingRunner.js";
+import {
+  loadSignalState
+} from "../broker/SignalStateStore.js";
+import {
+  assessSignalFreshness
+} from "../automation/SignalFreshness.js";
 import { getAlpacaConfig } from "../config/AlpacaConfig.js";
 import {
   getTradingConfig
 } from "../config/TradingConfig.js";
+import {
+  StrategyDashboardService
+} from "./StrategyDashboardService.js";
+import {
+  MarketDataBackfillRunner
+} from "../data/MarketDataBackfillRunner.js";
 
 export class AutomationService {
   private readonly statePath =
@@ -34,6 +52,12 @@ export class AutomationService {
 
   private readonly runner =
     new PaperTradingRunner();
+
+  private readonly dashboard =
+    new StrategyDashboardService();
+
+  private readonly backfillRunner =
+    new MarketDataBackfillRunner();
 
   getStatus(): AutomationStatusResponse {
     const state = loadAutomationState(
@@ -68,6 +92,7 @@ export class AutomationService {
       },
       lastRuns: state.lastRuns,
       runLog: state.runLog.slice(0, 20),
+      lastActionLog: state.lastActionLog,
       env: {
         paperTradingEnabled:
           tradingConfig.paperTradingEnabled,
@@ -75,12 +100,21 @@ export class AutomationService {
         allowLiveTrading:
           tradingConfig.allowLiveTrading
       },
-      market: null
+      market: null,
+      signalFreshness: null
     };
   }
 
   async getStatusWithMarket(): Promise<AutomationStatusResponse> {
+    const state = loadAutomationState(
+      this.statePath
+    );
     const status = this.getStatus();
+    const latestDataDate =
+      await this.dashboard.getLatestDataDate();
+
+    let market: AutomationStatusResponse["market"] =
+      null;
 
     try {
       const client = new AlpacaTradingClient(
@@ -89,17 +123,30 @@ export class AutomationService {
 
       const clock = await client.getClock();
 
-      return {
-        ...status,
-        market: {
-          isOpen: clock.is_open,
-          nextOpen: clock.next_open,
-          nextClose: clock.next_close
-        }
+      market = {
+        isOpen: clock.is_open,
+        nextOpen: clock.next_open,
+        nextClose: clock.next_close
       };
     } catch {
-      return status;
+      market = status.market;
     }
+
+    const signalFreshness =
+      assessSignalFreshness({
+        latestDataDate,
+        lastSignalRun: state.lastRuns.signal,
+        lastBackfillRun: state.lastRuns.backfill,
+        lastTradeRun: state.lastRuns.trade,
+        marketOpen: market?.isOpen ?? null,
+        tradeTimeEt: state.schedule.tradeTimeEt
+      });
+
+    return {
+      ...status,
+      market,
+      signalFreshness
+    };
   }
 
   setEnabled(enabled: boolean): AutomationStatusResponse {
@@ -189,31 +236,236 @@ export class AutomationService {
     );
   }
 
-  async runJob(
+  async runManualAction(
+    action: string
+  ): Promise<
+    AutomationStatusResponse & {
+      actionLog: string[];
+      success: boolean;
+      message: string;
+    }
+  > {
+    switch (action) {
+      case "enable": {
+        this.setEnabled(true);
+
+        return {
+          ...(await this.getStatusWithMarket()),
+          actionLog: buildControlActionLog(
+            action,
+            "Scheduled jobs will run when the scheduler is on."
+          ),
+          success: true,
+          message: "Automation enabled"
+        };
+      }
+
+      case "disable": {
+        this.setEnabled(false);
+
+        return {
+          ...(await this.getStatusWithMarket()),
+          actionLog: buildControlActionLog(
+            action,
+            "Scheduled jobs paused until turned on again."
+          ),
+          success: true,
+          message: "Automation disabled"
+        };
+      }
+
+      case "start-daemon": {
+        this.startDaemon();
+
+        return {
+          ...(await this.getStatusWithMarket()),
+          actionLog: buildControlActionLog(
+            action,
+            "Background scheduler process started."
+          ),
+          success: true,
+          message: "Scheduler started"
+        };
+      }
+
+      case "stop-daemon": {
+        this.stopDaemon();
+
+        return {
+          ...(await this.getStatusWithMarket()),
+          actionLog: buildControlActionLog(
+            action,
+            "Background scheduler process stopped."
+          ),
+          success: true,
+          message: "Scheduler stopped"
+        };
+      }
+
+      case "run-backfill": {
+        spawnAutomationJob("backfill");
+
+        return {
+          ...(await this.getStatusWithMarket()),
+          actionLog: [
+            "▶ Update Market Data",
+            "Backfill started in the background.",
+            "This usually takes 1–2 minutes — please wait."
+          ],
+          success: true,
+          message: "Backfill started"
+        };
+      }
+
+      case "run-signal":
+      case "run-trade-dry":
+      case "run-trade-execute": {
+        const job: AutomationJob =
+          action === "run-signal"
+            ? "signal"
+            : action === "run-trade-dry"
+              ? "trade-dry"
+              : "trade-execute";
+
+        if (job === "trade-execute") {
+          const freshness =
+            await this.getStatusWithMarket();
+
+          if (
+            freshness.signalFreshness?.isStale
+          ) {
+            return {
+              ...freshness,
+              actionLog: [
+                "▶ Execute Trade (override)",
+                freshness.signalFreshness
+                  .staleReason ??
+                  "Signal is stale.",
+                freshness.signalFreshness
+                  ?.needsBackfill
+                  ? "Update Market Data, then Run Signal Now."
+                  : "Run Signal Now first, then execute if you still want to trade early."
+              ],
+              success: false,
+              message:
+                "Blocked — signal is stale"
+            };
+          }
+        }
+
+        const detailed =
+          await this.runJobDetailed(
+            job,
+            "manual"
+          );
+
+        let log = detailed.log;
+
+        if (
+          job === "trade-dry" ||
+          job === "trade-execute"
+        ) {
+          const freshness =
+            await this.getStatusWithMarket();
+
+          if (
+            freshness.signalFreshness?.isStale &&
+            job === "trade-dry"
+          ) {
+            log = [
+              "⚠ Signal is stale — preview uses the last computed pick.",
+              freshness.signalFreshness
+                .staleReason ?? "",
+              "",
+              ...log
+            ];
+          }
+
+          if (
+            freshness.signalFreshness
+              ?.canManualExecute &&
+            job === "trade-execute"
+          ) {
+            log = [
+              freshness.signalFreshness
+                .manualExecuteHint ?? "",
+              "",
+              ...log
+            ];
+          }
+        }
+
+        return {
+          ...(await this.getStatusWithMarket()),
+          actionLog: log,
+          success: detailed.success,
+          message: detailed.message
+        };
+      }
+
+      default:
+        throw new Error(
+          `Unknown automation action: ${action}`
+        );
+    }
+  }
+
+  async runJobDetailed(
     job: AutomationJob,
     trigger: AutomationTrigger = "manual"
   ): Promise<{
     success: boolean;
     message: string;
+    log: string[];
   }> {
     const state = loadAutomationState(
       this.statePath
+    );
+
+    const tradingConfig = getTradingConfig();
+    const priorState = loadSignalState(
+      tradingConfig.signalStatePath
     );
 
     let result: {
       success: boolean;
       message: string;
       mode?: "dry-run" | "execute" | "offline";
+      signalDate?: string;
     };
 
+    let log: string[] = [];
+
     switch (job) {
+      case "backfill": {
+        const backfillResult =
+          await this.backfillRunner.runDailyUpdate();
+
+        log = buildBackfillActionLog(
+          backfillResult
+        );
+
+        result = {
+          success: backfillResult.success,
+          message: backfillResult.message
+        };
+        break;
+      }
+
       case "signal": {
         const signalResult =
           await this.runner.runSignal();
 
+        log = buildSignalActionLog(
+          priorState,
+          signalResult
+        );
+
         result = {
           success: signalResult.success,
-          message: signalResult.message
+          message: signalResult.message,
+          signalDate:
+            signalResult.signal?.signalDate
         };
         break;
       }
@@ -223,6 +475,11 @@ export class AutomationService {
           await this.runner.runPaperTrade({
             execute: false
           });
+
+        log = buildTradeActionLog(
+          tradeResult,
+          "Preview Trade"
+        );
 
         result = {
           success: tradeResult.success,
@@ -237,6 +494,11 @@ export class AutomationService {
           await this.runner.runPaperTrade({
             execute: true
           });
+
+        log = buildTradeActionLog(
+          tradeResult,
+          "Execute Trade"
+        );
 
         result = {
           success: tradeResult.success,
@@ -255,13 +517,40 @@ export class AutomationService {
     );
 
     saveAutomationState(
-      nextState,
+      {
+        ...nextState,
+        lastActionLog: {
+          at: new Date().toISOString(),
+          job,
+          success: result.success,
+          log
+        }
+      },
       this.statePath
     );
 
     return {
       success: result.success,
-      message: result.message
+      message: result.message,
+      log
+    };
+  }
+
+  async runJob(
+    job: AutomationJob,
+    trigger: AutomationTrigger = "manual"
+  ): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    const detailed = await this.runJobDetailed(
+      job,
+      trigger
+    );
+
+    return {
+      success: detailed.success,
+      message: detailed.message
     };
   }
 

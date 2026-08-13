@@ -26,10 +26,12 @@ const DEFAULT_STATE: AutomationState = {
     lastHeartbeat: null
   },
   lastRuns: {
+    backfill: null,
     signal: null,
     trade: null
   },
-  runLog: []
+  runLog: [],
+  lastActionLog: null
 };
 
 export function resolveAutomationStatePath(): string {
@@ -59,12 +61,16 @@ export function loadAutomationState(
         ...parsed.daemon
       },
       lastRuns: {
+        backfill:
+          parsed.lastRuns?.backfill ?? null,
         signal:
           parsed.lastRuns?.signal ?? null,
         trade:
           parsed.lastRuns?.trade ?? null
       },
-      runLog: parsed.runLog ?? []
+      runLog: parsed.runLog ?? [],
+      lastActionLog:
+        parsed.lastActionLog ?? null
     };
   } catch {
     return { ...DEFAULT_STATE };
@@ -130,6 +136,7 @@ export function recordJobRun(
     success: boolean;
     message: string;
     mode?: AutomationJobRun["mode"];
+    signalDate?: string;
   }
 ): AutomationState {
   const now = new Date();
@@ -139,7 +146,10 @@ export function recordJobRun(
     day,
     success: result.success,
     message: result.message,
-    ...(result.mode ? { mode: result.mode } : {})
+    ...(result.mode ? { mode: result.mode } : {}),
+    ...(result.signalDate
+      ? { signalDate: result.signalDate }
+      : {})
   };
 
   let nextState = appendRunLog(state, {
@@ -155,6 +165,14 @@ export function recordJobRun(
       lastRuns: {
         ...nextState.lastRuns,
         signal: run
+      }
+    };
+  } else if (job === "backfill") {
+    nextState = {
+      ...nextState,
+      lastRuns: {
+        ...nextState.lastRuns,
+        backfill: run
       }
     };
   } else {

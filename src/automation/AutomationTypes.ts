@@ -1,4 +1,5 @@
 export type AutomationJob =
+  | "backfill"
   | "signal"
   | "trade-dry"
   | "trade-execute";
@@ -20,6 +21,7 @@ export interface AutomationJobRun {
   success: boolean;
   message: string;
   mode?: "dry-run" | "execute" | "offline";
+  signalDate?: string;
 }
 
 export interface AutomationRunLogEntry {
@@ -42,10 +44,17 @@ export interface AutomationState {
   schedule: AutomationSchedule;
   daemon: AutomationDaemonState;
   lastRuns: {
+    backfill: AutomationJobRun | null;
     signal: AutomationJobRun | null;
     trade: AutomationJobRun | null;
   };
   runLog: AutomationRunLogEntry[];
+  lastActionLog: {
+    at: string;
+    job: AutomationJob;
+    success: boolean;
+    log: string[];
+  } | null;
 }
 
 export interface AutomationStatusResponse {
@@ -59,6 +68,7 @@ export interface AutomationStatusResponse {
   };
   lastRuns: AutomationState["lastRuns"];
   runLog: AutomationRunLogEntry[];
+  lastActionLog: AutomationState["lastActionLog"];
   env: {
     paperTradingEnabled: boolean;
     alpacaPaper: boolean;
@@ -68,5 +78,16 @@ export interface AutomationStatusResponse {
     isOpen: boolean | null;
     nextOpen: string | null;
     nextClose: string | null;
+  } | null;
+  signalFreshness: {
+    latestDataDate: string | null;
+    lastSignalDate: string | null;
+    lastSignalRunAt: string | null;
+    isStale: boolean;
+    staleReason: string | null;
+    needsBackfill: boolean;
+    backfillHint: string | null;
+    canManualExecute: boolean;
+    manualExecuteHint: string | null;
   } | null;
 }

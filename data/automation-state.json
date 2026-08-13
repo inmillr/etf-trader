@@ -1,0 +1,126 @@
+{
+  "enabled": true,
+  "schedule": {
+    "signalTimeEt": "16:05",
+    "tradeTimeEt": "09:35",
+    "timezone": "America/New_York"
+  },
+  "daemon": {
+    "pid": null,
+    "startedAt": null,
+    "lastHeartbeat": null
+  },
+  "lastRuns": {
+    "backfill": {
+      "at": "2026-08-13T22:06:44.281Z",
+      "day": "2026-08-13",
+      "success": true,
+      "message": "Downloaded 172 new daily bar(s) for 30/30 ETFs"
+    },
+    "signal": {
+      "at": "2026-08-13T22:06:54.647Z",
+      "day": "2026-08-13",
+      "success": true,
+      "message": "ROTATE — Rotate XLK → SMH.",
+      "signalDate": "2026-08-13"
+    },
+    "trade": {
+      "at": "2026-08-13T21:55:56.464Z",
+      "day": "2026-08-13",
+      "success": true,
+      "message": "Signal is HOLD — no order required.",
+      "mode": "dry-run"
+    }
+  },
+  "runLog": [
+    {
+      "id": "1786658814649-signal",
+      "at": "2026-08-13T22:06:54.649Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "ROTATE — Rotate XLK → SMH."
+    },
+    {
+      "id": "1786658804290-backfill",
+      "at": "2026-08-13T22:06:44.290Z",
+      "job": "backfill",
+      "trigger": "manual",
+      "success": true,
+      "message": "Downloaded 172 new daily bar(s) for 30/30 ETFs"
+    },
+    {
+      "id": "1786658737274-backfill",
+      "at": "2026-08-13T22:05:37.274Z",
+      "job": "backfill",
+      "trigger": "manual",
+      "success": true,
+      "message": "Downloaded 172 new daily bar(s) for 30/30 ETFs"
+    },
+    {
+      "id": "1786658486692-signal",
+      "at": "2026-08-13T22:01:26.692Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "HOLD — Keep holding XLK."
+    },
+    {
+      "id": "1786658474191-signal",
+      "at": "2026-08-13T22:01:14.191Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "HOLD — Keep holding XLK."
+    },
+    {
+      "id": "1786658156467-trade-dry",
+      "at": "2026-08-13T21:55:56.467Z",
+      "job": "trade-dry",
+      "trigger": "manual",
+      "success": true,
+      "message": "Signal is HOLD — no order required."
+    },
+    {
+      "id": "1786658148703-signal",
+      "at": "2026-08-13T21:55:48.703Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "HOLD — Keep holding XLK."
+    },
+    {
+      "id": "1786658138123-signal",
+      "at": "2026-08-13T21:55:38.123Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "HOLD — Keep holding XLK."
+    },
+    {
+      "id": "1786658023892-signal",
+      "at": "2026-08-13T21:53:43.892Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "HOLD — Keep holding XLK."
+    },
+    {
+      "id": "1786658015482-signal",
+      "at": "2026-08-13T21:53:35.482Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "HOLD — Keep holding XLK."
+    },
+    {
+      "id": "1786657886115-signal",
+      "at": "2026-08-13T21:51:26.115Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "ROTATE — Rotate XLE → XLK."
+    }
+  ],
+  "lastActionLog": null
+}
