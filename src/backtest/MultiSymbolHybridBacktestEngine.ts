@@ -27,8 +27,10 @@ import {
 } from "../strategy/IntradayMomentumStrategy.js";
 import {
   PortfolioSimulator,
-  type PortfolioSimulatorOptions
+  type PortfolioSimulatorOptions,
+  type Trade
 } from "./PortfolioSimulator.js";
+import type { TradeContext } from "./TradeReason.js";
 import type {
   Strategy,
   StrategyOrder
@@ -64,6 +66,7 @@ export interface MultiSymbolHybridBacktestResult {
     symbols: string[];
   }>;
   intradaySymbols: string[];
+  tradeLog: Trade[];
 }
 
 interface SymbolIntradayState {
@@ -328,7 +331,11 @@ export class MultiSymbolHybridBacktestEngine {
                 portfolio,
                 exitCandle,
                 position.quantity,
-                exitCandle.open
+                exitCandle.open,
+                {
+                  reason: "SELL_ROTATION",
+                  detail: `Rotate out of ${position.symbol}`
+                }
               );
 
               const state = strategyStates.get(
@@ -429,7 +436,12 @@ export class MultiSymbolHybridBacktestEngine {
               portfolio,
               dailyCandle,
               positionBeforeDay,
-              dailyCandle.open
+              dailyCandle.open,
+              {
+                reason: "SELL_SIGNAL",
+                detail:
+                  "Daily MA bearish crossover exit"
+              }
             );
 
             if (
@@ -488,7 +500,12 @@ export class MultiSymbolHybridBacktestEngine {
               portfolio,
               candle,
               position.quantity,
-              candle.open
+              candle.open,
+              {
+                reason: "SELL_SIGNAL",
+                detail:
+                  "Daily MA bearish crossover exit"
+              }
             );
 
             if (
@@ -532,7 +549,12 @@ export class MultiSymbolHybridBacktestEngine {
                   symbol,
                   quantity,
                   candle,
-                  candle.open
+                  candle.open,
+                  {
+                    reason: "BUY_STRATEGY",
+                    detail:
+                      "5m intraday momentum entry"
+                  }
                 );
 
                 heldSymbol = symbol;
@@ -565,11 +587,23 @@ export class MultiSymbolHybridBacktestEngine {
             );
 
             if (exit) {
+              const exitContext: TradeContext =
+                exit.reason === "stop"
+                  ? {
+                      reason: "SELL_STOP",
+                      detail: "ATR stop loss hit"
+                    }
+                  : {
+                      reason: "SELL_TARGET",
+                      detail: "ATR take profit hit"
+                    };
+
               closePositionAtPrice(
                 portfolio,
                 candle,
                 exit.quantity,
-                exit.price
+                exit.price,
+                exitContext
               );
 
               state.strategy.clearPositionRisk(
@@ -663,7 +697,8 @@ export class MultiSymbolHybridBacktestEngine {
       selections,
       intradaySymbols: Array.from(
         intradayCandlesBySymbol.keys()
-      )
+      ),
+      tradeLog: portfolio.getTrades()
     };
   }
 

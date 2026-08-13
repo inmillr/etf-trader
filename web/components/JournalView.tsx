@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { EquityChart } from "@/components/EquityChart";
 import { SiteHeader } from "@/components/SiteHeader";
+import { TradeLogTable } from "@/components/TradeLogTable";
 import type {
   DashboardJournalResponse
 } from "@/types/dashboard";
@@ -203,6 +204,14 @@ export function JournalView({
               ))}
           </tbody>
         </table>
+      </section>
+
+      <section
+        className="panel"
+        style={{ marginTop: 16 }}
+      >
+        <h2>Trades</h2>
+        <TradeLogTable trades={data.trades} />
       </section>
     </main>
   );

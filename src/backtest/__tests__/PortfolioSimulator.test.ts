@@ -307,6 +307,67 @@ describe(
     );
 
     test(
+      "assigns trade ids and reasons",
+      () => {
+        const portfolio =
+          new PortfolioSimulator({
+            initialCash: 10_000
+          });
+
+        portfolio.buy(
+          "QQQ",
+          5,
+          candle,
+          candle.close,
+          {
+            reason: "BUY_REBALANCE",
+            detail: "Weekly rebalance entry into QQQ"
+          }
+        );
+
+        const sellCandle: Candle = {
+          ...candle,
+          close: 510,
+          timestamp:
+            new Date(
+              "2026-01-01T15:00:00Z"
+            )
+        };
+
+        portfolio.sell(
+          "QQQ",
+          5,
+          sellCandle,
+          sellCandle.close,
+          {
+            reason: "SELL_CASH",
+            detail:
+              "Absolute momentum negative — move to cash"
+          }
+        );
+
+        const trades =
+          portfolio.getTrades();
+
+        expect(trades[0]?.id).toMatch(
+          /^T-\d{4}-\d{2}-\d{2}-\d{4}$/
+        );
+
+        expect(trades[0]).toMatchObject({
+          reason: "BUY_REBALANCE",
+          detail:
+            "Weekly rebalance entry into QQQ"
+        });
+
+        expect(trades[1]).toMatchObject({
+          reason: "SELL_CASH",
+          detail:
+            "Absolute momentum negative — move to cash"
+        });
+      }
+    );
+
+    test(
       "creates portfolio snapshots",
       () => {
         const portfolio =

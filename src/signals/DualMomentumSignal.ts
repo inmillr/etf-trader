@@ -39,6 +39,8 @@ export interface DualMomentumSignalResult {
   rawPick: string | null;
   isRebalanceDay: boolean;
   absoluteMomentumPassed: boolean;
+  usingFallback: boolean;
+  fallbackSymbol: string | null;
   rotationBlocked: boolean;
   rankings: Array<{
     symbol: string;
@@ -76,6 +78,12 @@ export function findLatestTradingDay(
   );
 
   return dayKey(latest.timestamp);
+}
+
+function fallbackLabel(
+  fallbackSymbol: string
+): string {
+  return `${fallbackSymbol} fallback`;
 }
 
 export function evaluateDualMomentumSignal(
@@ -135,13 +143,26 @@ export function evaluateDualMomentumSignal(
     })
   );
 
+  const usingFallback =
+    selection.usedFallback ?? false;
+
+  const fallbackSymbol = usingFallback
+    ? (selection.selectedSymbols[0] ?? null)
+    : null;
+
   const rawPick =
+    selection.momentumSymbol ??
+    selection.selectedSymbols[0] ??
+    null;
+
+  const effectiveSymbol =
     selection.selectedSymbols[0] ?? null;
 
   const absoluteMomentumPassed =
-    rawPick !== null;
+    !usingFallback &&
+    effectiveSymbol !== null;
 
-  if (!absoluteMomentumPassed) {
+  if (!effectiveSymbol) {
     if (heldSymbol) {
       return {
         signalDate: signalDay,
@@ -156,6 +177,8 @@ export function evaluateDualMomentumSignal(
         rawPick: null,
         isRebalanceDay,
         absoluteMomentumPassed: false,
+        usingFallback: false,
+        fallbackSymbol: null,
         rotationBlocked: false,
         rankings,
         reason: isRebalanceDay
@@ -173,16 +196,22 @@ export function evaluateDualMomentumSignal(
       rawPick: null,
       isRebalanceDay,
       absoluteMomentumPassed: false,
+      usingFallback: false,
+      fallbackSymbol: null,
       rotationBlocked: false,
       rankings,
       reason: "Absolute momentum negative — stay in cash."
     };
   }
 
+  const entryLabel = usingFallback
+    ? `${effectiveSymbol} (${fallbackLabel(effectiveSymbol)})`
+    : effectiveSymbol;
+
   if (!isRebalanceDay) {
     if (heldSymbol) {
       const stillValid =
-        heldSymbol === rawPick ||
+        heldSymbol === effectiveSymbol ||
         rankings.some(
           (entry) =>
             entry.symbol === heldSymbol
@@ -196,12 +225,14 @@ export function evaluateDualMomentumSignal(
         heldSymbol,
         rawPick,
         isRebalanceDay: false,
-        absoluteMomentumPassed: true,
+        absoluteMomentumPassed,
+        usingFallback,
+        fallbackSymbol,
         rotationBlocked: !stillValid,
         rankings,
         reason:
-          rawPick !== heldSymbol
-            ? `Hold ${heldSymbol} until weekly rebalance (Monday). Model pick: ${rawPick}.`
+          effectiveSymbol !== heldSymbol
+            ? `Hold ${heldSymbol} until weekly rebalance (Monday). Target: ${entryLabel}.`
             : `Hold ${heldSymbol} until next rebalance.`
       };
     }
@@ -214,10 +245,14 @@ export function evaluateDualMomentumSignal(
       heldSymbol: null,
       rawPick,
       isRebalanceDay: false,
-      absoluteMomentumPassed: true,
+      absoluteMomentumPassed,
+      usingFallback,
+      fallbackSymbol,
       rotationBlocked: false,
       rankings,
-      reason: `Wait for rebalance (Monday) to enter ${rawPick}.`
+      reason: usingFallback
+        ? `Wait for rebalance (Monday) to enter ${entryLabel}.`
+        : `Wait for rebalance (Monday) to enter ${effectiveSymbol}.`
     };
   }
 
@@ -240,8 +275,8 @@ export function evaluateDualMomentumSignal(
     activeSymbols[0] ?? null;
 
   const rotationBlocked =
-    rawPick !== null &&
-    targetSymbol !== rawPick;
+    effectiveSymbol !== null &&
+    targetSymbol !== effectiveSymbol;
 
   if (!heldSymbol && targetSymbol) {
     return {
@@ -252,10 +287,14 @@ export function evaluateDualMomentumSignal(
       heldSymbol: null,
       rawPick,
       isRebalanceDay: true,
-      absoluteMomentumPassed: true,
+      absoluteMomentumPassed,
+      usingFallback,
+      fallbackSymbol,
       rotationBlocked,
       rankings,
-      reason: `Enter ${targetSymbol} on rebalance.`
+      reason: usingFallback
+        ? `Enter ${targetSymbol} on rebalance (${fallbackLabel(targetSymbol)}).`
+        : `Enter ${targetSymbol} on rebalance.`
     };
   }
 
@@ -272,10 +311,14 @@ export function evaluateDualMomentumSignal(
       heldSymbol,
       rawPick,
       isRebalanceDay: true,
-      absoluteMomentumPassed: true,
+      absoluteMomentumPassed,
+      usingFallback,
+      fallbackSymbol,
       rotationBlocked,
       rankings,
-      reason: `Rotate ${heldSymbol} → ${targetSymbol}.`
+      reason: usingFallback
+        ? `Rotate ${heldSymbol} → ${targetSymbol} (${fallbackLabel(targetSymbol)}).`
+        : `Rotate ${heldSymbol} → ${targetSymbol}.`
     };
   }
 
@@ -288,11 +331,13 @@ export function evaluateDualMomentumSignal(
       heldSymbol,
       rawPick,
       isRebalanceDay: true,
-      absoluteMomentumPassed: true,
+      absoluteMomentumPassed,
+      usingFallback,
+      fallbackSymbol,
       rotationBlocked,
       rankings,
       reason: rotationBlocked
-        ? `Keep ${heldSymbol}; rotation policy blocks switch to ${rawPick}.`
+        ? `Keep ${heldSymbol}; rotation policy blocks switch to ${entryLabel}.`
         : `Keep holding ${heldSymbol}.`
     };
   }
@@ -305,7 +350,9 @@ export function evaluateDualMomentumSignal(
     heldSymbol,
     rawPick,
     isRebalanceDay: true,
-    absoluteMomentumPassed: true,
+    absoluteMomentumPassed,
+    usingFallback,
+    fallbackSymbol,
     rotationBlocked,
     rankings,
     reason: "No action."

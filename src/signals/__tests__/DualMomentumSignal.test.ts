@@ -184,4 +184,69 @@ describe("DualMomentumSignal", () => {
     expect(signal.action).toBe("hold");
     expect(signal.targetSymbol).toBe("IWM");
   });
+
+  test("recommends SPY fallback on rebalance when momentum fails", () => {
+    const candlesBySymbol = new Map([
+      [
+        "QQQ",
+        createDailyCandles(
+          "QQQ",
+          "2026-01-01",
+          Array.from(
+            { length: 160 },
+            (_, index) =>
+              200 - index * 0.6
+          )
+        )
+      ],
+      [
+        "IWM",
+        createDailyCandles(
+          "IWM",
+          "2026-01-01",
+          Array.from(
+            { length: 160 },
+            (_, index) =>
+              180 - index * 0.5
+          )
+        )
+      ],
+      [
+        "SPY",
+        createDailyCandles(
+          "SPY",
+          "2026-01-01",
+          Array.from(
+            { length: 160 },
+            (_, index) =>
+              190 - index * 0.4
+          )
+        )
+      ]
+    ]);
+
+    const signal = evaluateDualMomentumSignal(
+      "2026-06-01",
+      candidates,
+      candlesBySymbol,
+      {
+        lookbackDays: 126,
+        selector: {
+          filter: {
+            minAvgDailyVolume: 100_000,
+            minAvgDailyDollarVolume: 1_000_000,
+            minPrice: 10,
+            minHistoryDays: 30
+          }
+        }
+      }
+    );
+
+    expect(signal.isRebalanceDay).toBe(true);
+    expect(signal.action).toBe("buy");
+    expect(signal.targetSymbol).toBe("SPY");
+    expect(signal.usingFallback).toBe(true);
+    expect(signal.absoluteMomentumPassed).toBe(false);
+    expect(signal.rawPick).toBe("IWM");
+  });
 });

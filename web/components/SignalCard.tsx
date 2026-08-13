@@ -25,7 +25,7 @@ export function SignalCard({
 }) {
   return (
     <section className="panel">
-      <h2>Today&apos;s Signal</h2>
+      <h2>Today&apos;s Signal · Hybrid</h2>
       <p className="muted">
         Data through {signal.signalDate} ·
         selection as of{" "}
@@ -48,7 +48,9 @@ export function SignalCard({
           {signal.action.replace("_", " ")}
         </span>
         <strong style={{ fontSize: "1.25rem" }}>
-          {signal.targetSymbol ?? "(cash)"}
+          {signal.targetSymbol ??
+            signal.heldSymbol ??
+            "(flat)"}
         </strong>
       </div>
 
@@ -62,20 +64,41 @@ export function SignalCard({
           marginTop: 16
         }}
       >
-        <dt className="muted">Model pick</dt>
-        <dd>{signal.rawPick ?? "(cash)"}</dd>
+        <dt className="muted">Universe pick</dt>
+        <dd>{signal.rawPick ?? "(none)"}</dd>
+        <dt className="muted">Daily trend</dt>
+        <dd>
+          {signal.trendBullish
+            ? "Bullish"
+            : "Not bullish"}
+          {signal.bearishCrossover
+            ? " · bearish cross"
+            : ""}
+        </dd>
+        <dt className="muted">5m setup</dt>
+        <dd>
+          {signal.intradaySetup
+            ? "Ready"
+            : signal.inEntryWindow
+              ? "Watching"
+              : "Outside window"}
+        </dd>
         <dt className="muted">Rebalance day</dt>
         <dd>
           {signal.isRebalanceDay
             ? "Yes (Monday)"
             : "No"}
         </dd>
-        <dt className="muted">Absolute momentum</dt>
-        <dd>
-          {signal.absoluteMomentumPassed
-            ? "Pass"
-            : "Fail"}
-        </dd>
+        {signal.trendFast !== null ? (
+          <>
+            <dt className="muted">MA 20/50</dt>
+            <dd>
+              {signal.trendFast.toFixed(2)} /{" "}
+              {signal.trendSlow?.toFixed(2) ??
+                "—"}
+            </dd>
+          </>
+        ) : null}
         {signal.heldSymbol ? (
           <>
             <dt className="muted">Current hold</dt>
@@ -93,49 +116,46 @@ export function SignalCard({
         className="rankings"
         style={{ marginTop: 20 }}
       >
-        <h3>Rankings (126d return)</h3>
-        {signal.rankings.map((entry, index) => {
-          const maxReturn = Math.max(
-            ...signal.rankings.map(
-              (item) =>
-                Math.abs(
-                  item.trailingReturn
-                )
-            ),
-            1
-          );
+        <h3>Rankings (30d score · liquid ETFs)</h3>
+        {signal.rankings.slice(0, 8).map(
+          (entry, index) => {
+            const maxScore = Math.max(
+              ...signal.rankings
+                .slice(0, 8)
+                .map((item) =>
+                  Math.abs(item.score)
+                ),
+              1
+            );
 
-          const width =
-            (Math.abs(entry.trailingReturn) /
-              maxReturn) *
-            100;
+            const width =
+              (Math.abs(entry.score) /
+                maxScore) *
+              100;
 
-          return (
-            <div
-              key={entry.symbol}
-              className="rank-row"
-            >
-              <span>#{index + 1}</span>
-              <div>
-                <strong>{entry.symbol}</strong>
-                <div className="rank-bar">
-                  <span
-                    style={{ width: `${width}%` }}
-                  />
-                </div>
-              </div>
-              <span
-                className={
-                  entry.trailingReturn >= 0
-                    ? "positive"
-                    : "negative"
-                }
+            return (
+              <div
+                key={entry.symbol}
+                className="rank-row"
               >
-                {entry.trailingReturn.toFixed(2)}%
-              </span>
-            </div>
-          );
-        })}
+                <span>#{index + 1}</span>
+                <div>
+                  <strong>{entry.symbol}</strong>
+                  <div className="rank-bar">
+                    <span
+                      style={{
+                        width: `${width}%`
+                      }}
+                    />
+                  </div>
+                </div>
+                <span>
+                  {entry.score.toFixed(2)}
+                </span>
+              </div>
+            );
+          }
+        )}
       </div>
     </section>
   );

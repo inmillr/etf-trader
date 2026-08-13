@@ -1,25 +1,12 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 import "dotenv/config";
 
-import { BacktestDataLoader } from "../backtest/BacktestDataLoader.js";
-import { SQLiteCandleRepository } from "../data/SQLiteCandleRepository.js";
-import { aggregateToDailyCandles } from "../market/DailyCandleAggregator.js";
 import {
-  evaluateDualMomentumSignal,
-  findLatestTradingDay
-} from "../signals/DualMomentumSignal.js";
-import type { Candle } from "../types/market.js";
-import {
-  LIQUID_ETF_UNIVERSE,
-  StaticUniverseProvider
-} from "../universe/EtfUniverse.js";
-
-const databasePath =
-  process.env.DATABASE_PATH ??
-  "./data/market.db";
+  StrategyDashboardService
+} from "../services/StrategyDashboardService.js";
 
 const defaultStatePath =
   process.env.SIGNAL_STATE_PATH ??
@@ -40,9 +27,6 @@ function readFlag(name: string): string | undefined {
 const signalDateArg = readFlag("--date");
 const heldArg = readFlag("--held");
 const sinceArg = readFlag("--since");
-const lookbackDays = Number(
-  readFlag("--lookback") ?? 126
-);
 const statePath =
   readFlag("--state-file") ??
   defaultStatePath;
@@ -51,48 +35,9 @@ const saveState =
   args.includes("--save") ||
   !args.includes("--no-save");
 
-const tunedFilter = {
-  minAvgDailyVolume: 500_000,
-  minAvgDailyDollarVolume: 10_000_000,
-  minPrice: 10,
-  minHistoryDays: 30,
-  maxAtrPercent: 5.0
-};
-
-const rotationPolicy = {
-  minHoldDays: 5,
-  minScoreImprovement: 5
-};
-
 interface SignalState {
   symbol: string;
   since: string;
-}
-
-function loadState(
-  path: string
-): SignalState | null {
-  try {
-    const raw = readFileSync(
-      path,
-      "utf8"
-    );
-
-    const parsed = JSON.parse(
-      raw
-    ) as SignalState;
-
-    if (
-      !parsed.symbol ||
-      !parsed.since
-    ) {
-      return null;
-    }
-
-    return parsed;
-  } catch {
-    return null;
-  }
 }
 
 function saveStateFile(
@@ -127,220 +72,105 @@ function formatAction(
     .toUpperCase();
 }
 
-const repository =
-  new SQLiteCandleRepository(
-    databasePath
-  );
+const service =
+  new StrategyDashboardService();
 
-try {
-  const loader = new BacktestDataLoader(
-    repository
-  );
+const savedState =
+  service.loadSignalState();
 
-  const provider =
-    new StaticUniverseProvider(
-      LIQUID_ETF_UNIVERSE
-    );
+const signal = await service.getSignal({
+  ...(signalDateArg ? { date: signalDateArg } : {}),
+  ...(heldArg !== undefined
+    ? { heldSymbol: heldArg }
+    : {}),
+  ...(sinceArg !== undefined
+    ? { heldSinceDay: sinceArg }
+    : {})
+});
 
-  const candidates =
-    await provider.getCandidates();
-
-  const warmupDays = lookbackDays + 252;
-  const end = signalDateArg
-    ? new Date(`${signalDateArg}T23:59:59.999Z`)
-    : new Date();
-
-  const dataStart = new Date(end);
-  dataStart.setUTCDate(
-    dataStart.getUTCDate() - warmupDays
-  );
-
-  const candlesBySymbol =
-    new Map<string, Candle[]>();
-
-  for (const candidate of candidates) {
-    let candles = await loader.load({
-      symbol: candidate.symbol,
-      timeframe: "1d",
-      start: dataStart,
-      end
+if (saveState) {
+  if (
+    signal.action === "buy" ||
+    signal.action === "rotate"
+  ) {
+    saveStateFile(statePath, {
+      symbol: signal.targetSymbol!,
+      since: signal.signalDate
     });
-
-    if (candles.length === 0) {
-      const intraday = await loader.load({
-        symbol: candidate.symbol,
-        timeframe: "5m",
-        start: dataStart,
-        end
-      });
-
-      candles = aggregateToDailyCandles(
-        intraday
-      );
-    }
-
-    candlesBySymbol.set(
-      candidate.symbol,
-      candles
-    );
+  } else if (signal.action === "exit") {
+    saveStateFile(statePath, null);
   }
+}
 
-  candlesBySymbol.set(
-    "SPY",
-    await loader.load({
-      symbol: "SPY",
-      timeframe: "1d",
-      start: dataStart,
-      end
-    })
-  );
+console.log(
+  "=== Daily Signal (Hybrid) ==="
+);
+console.log(
+  `Data through:          ${signal.signalDate}`
+);
+console.log(
+  `Selection as of:       ${signal.selectionAsOfDate}`
+);
+console.log(
+  "Universe:              SPY, QQQ, IWM, DIA (liquid + 5m)"
+);
+console.log(
+  `Rebalance day:         ${signal.isRebalanceDay ? "yes (Monday)" : "no"}`
+);
+console.log("");
 
-  const latestDay =
-    signalDateArg ??
-    findLatestTradingDay(
-      candlesBySymbol
-    );
+console.log(
+  `Action:                ${formatAction(signal.action)}`
+);
+console.log(
+  `Target:                ${signal.targetSymbol ?? signal.heldSymbol ?? "(flat)"}`
+);
 
-  if (!latestDay) {
-    console.error(
-      "No daily candles in SQLite. Run backfill first:\n" +
-      "  npm run backfill:once"
-    );
-
-    process.exit(1);
-  }
-
-  const savedState = loadState(statePath);
-
-  const heldSymbol =
-    heldArg ??
-    savedState?.symbol ??
-    null;
-
-  const heldSinceDay =
-    sinceArg ??
-    savedState?.since ??
-    null;
-
-  const availableCandidates =
-    candidates.filter((candidate) =>
-      (candlesBySymbol.get(
-        candidate.symbol
-      )?.length ?? 0) > 0
-    );
-
-  const signal = evaluateDualMomentumSignal(
-    latestDay,
-    availableCandidates,
-    candlesBySymbol,
-    {
-      lookbackDays,
-      rotation: rotationPolicy,
-      selector: {
-        lookbackDays,
-        filter: tunedFilter
-      },
-      heldSymbol,
-      heldSinceDay
-    }
-  );
-
-  if (saveState) {
-    if (
-      signal.action === "buy" ||
-      signal.action === "rotate"
-    ) {
-      saveStateFile(statePath, {
-        symbol: signal.targetSymbol!,
-        since: signal.signalDate
-      });
-    } else if (
-      signal.action === "exit" ||
-      signal.action === "stay_cash"
-    ) {
-      saveStateFile(statePath, null);
-    }
-  }
-
+if (savedState?.symbol || signal.heldSymbol) {
   console.log(
-    "=== Daily Signal (Dual Momentum) ==="
+    `Current hold:          ${signal.heldSymbol ?? savedState?.symbol}${signal.heldSinceDay ? ` since ${signal.heldSinceDay}` : ""}`
   );
-  console.log(
-    `Data through:        ${signal.signalDate}`
-  );
-  console.log(
-    `Selection as of:       ${signal.selectionAsOfDate}`
-  );
-  console.log(
-    `Universe:              SPY, QQQ, IWM, DIA`
-  );
-  console.log(
-    `Lookback:              ${lookbackDays} trading days`
-  );
-  console.log(
-    `Rebalance day:         ${signal.isRebalanceDay ? "yes (Monday)" : "no"}`
-  );
-  console.log("");
+}
 
+if (signal.rawPick) {
   console.log(
-    `Action:                ${formatAction(signal.action)}`
+    `Universe pick:         ${signal.rawPick}`
   );
+}
 
-  if (signal.targetSymbol) {
-    console.log(
-      `Target:                ${signal.targetSymbol}`
-    );
-  } else {
-    console.log(
-      "Target:                (cash)"
-    );
-  }
+console.log(
+  `Daily trend:           ${signal.trendBullish ? "bullish" : "not bullish"}`
+);
+console.log(
+  `5m setup:              ${signal.intradaySetup ? "ready" : signal.inEntryWindow ? "watching" : "outside window"}`
+);
+console.log("");
+console.log(
+  `Reason:                ${signal.reason}`
+);
+console.log("");
 
-  if (heldSymbol) {
-    console.log(
-      `Current hold:          ${heldSymbol}${heldSinceDay ? ` since ${heldSinceDay}` : ""}`
-    );
-  }
+console.log(
+  "=== Rankings (30d score) ==="
+);
 
-  if (signal.rawPick) {
-    console.log(
-      `Model pick:            ${signal.rawPick}`
-    );
-  }
-
+for (const entry of signal.rankings.slice(0, 10)) {
   console.log(
-    `Absolute momentum:     ${signal.absoluteMomentumPassed ? "pass" : "fail"}`
+    `  ${entry.symbol.padEnd(5)}  ${entry.score.toFixed(2)}`
   );
-  console.log("");
+}
+
+console.log("");
+console.log(
+  "Local SQLite only — no API calls."
+);
+
+if (saveState) {
   console.log(
-    `Reason:                ${signal.reason}`
+    `State file:            ${statePath}`
   );
-  console.log("");
-
+} else {
   console.log(
-    "=== Rankings (trailing return %) ==="
+    "State file:            not updated (--no-save)"
   );
-
-  for (const entry of signal.rankings) {
-    console.log(
-      `  ${entry.symbol.padEnd(4)}  ${entry.trailingReturn.toFixed(2)}%`
-    );
-  }
-
-  console.log("");
-  console.log(
-    "Local SQLite only — no API calls."
-  );
-
-  if (saveState) {
-    console.log(
-      `State file:            ${statePath}`
-    );
-  } else {
-    console.log(
-      "State file:            not updated (--no-save)"
-    );
-  }
-} finally {
-  repository.close();
 }

@@ -5,6 +5,7 @@ import {
 import { EquityChart } from "@/components/EquityChart";
 import { SignalCard } from "@/components/SignalCard";
 import { SiteHeader } from "@/components/SiteHeader";
+import { TradeLogTable } from "@/components/TradeLogTable";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function DashboardPage() {
           style={{ marginTop: 16 }}
         >
           <h2>
-            Backtest · {backtest.start} →{" "}
+            Hybrid Backtest · {backtest.start} →{" "}
             {backtest.end}
           </h2>
           <div
@@ -68,15 +69,44 @@ export default async function DashboardPage() {
               </p>
             </div>
             <div>
+              <p className="muted">Trades</p>
+              <p className="metric-value">
+                {backtest.trades}
+              </p>
+            </div>
+            <div>
               <p className="muted">Max drawdown</p>
               <p className="metric-value negative">
                 {backtest.maxDrawdown.toFixed(2)}%
               </p>
             </div>
+          </div>
+          <div
+            className="grid grid-4"
+            style={{ marginTop: 12 }}
+          >
             <div>
-              <p className="muted">Final equity</p>
+              <p className="muted">Exposure</p>
               <p className="metric-value">
-                ${backtest.finalEquity.toFixed(2)}
+                {backtest.exposurePercent.toFixed(1)}%
+              </p>
+            </div>
+            <div>
+              <p className="muted">Stop exits</p>
+              <p className="metric-value">
+                {backtest.stopExits}
+              </p>
+            </div>
+            <div>
+              <p className="muted">Target exits</p>
+              <p className="metric-value">
+                {backtest.targetExits}
+              </p>
+            </div>
+            <div>
+              <p className="muted">Trend exits</p>
+              <p className="metric-value">
+                {backtest.trendExits}
               </p>
             </div>
           </div>
@@ -114,12 +144,28 @@ export default async function DashboardPage() {
                     <td>
                       {selection.symbols.join(
                         ", "
-                      ) || "(cash)"}
+                      ) || "(flat)"}
                     </td>
                   </tr>
                 ))}
             </tbody>
           </table>
+        </section>
+
+        <section
+          className="panel"
+          style={{ marginTop: 16 }}
+        >
+          <h2>Trade Log</h2>
+          <p className="muted">
+            Weekly universe rotation plus 5m
+            entries, ATR stops/targets, and daily
+            trend exits.
+          </p>
+          <TradeLogTable
+            trades={backtest.tradeLog}
+            limit={24}
+          />
         </section>
       </main>
     );

@@ -1,5 +1,7 @@
 import type { Candle } from "../types/market.js";
 
+import type { TradeContext } from "./TradeReason.js";
+
 export type OrderSide =
   "buy" |
   "sell";
@@ -11,12 +13,15 @@ export interface PortfolioSimulatorOptions {
 }
 
 export interface Trade {
+  id: string;
   side: OrderSide;
   symbol: string;
   quantity: number;
   price: number;
   timestamp: Date;
   commission: number;
+  reason: TradeContext["reason"];
+  detail?: string;
 }
 
 export interface Position {
@@ -45,6 +50,8 @@ export class PortfolioSimulator {
     new Map<string, Position>();
 
   private readonly trades: Trade[] = [];
+
+  private tradeSequence = 0;
 
   private realizedPnl = 0;
 
@@ -109,7 +116,8 @@ private totalLosingPnl = 0;
     quantity: number,
     candle: Candle,
     executionPrice: number =
-      candle.close
+      candle.close,
+    context?: TradeContext
   ): void {
     this.validateOrder(
       symbol,
@@ -175,14 +183,17 @@ if (totalCost > this.cash) {
       candle.close
     );
 
-    this.trades.push({
-      side: "buy",
-      symbol,
-      quantity,
-      price: adjustedPrice,
-      timestamp: candle.timestamp,
-      commission
-    });
+    this.trades.push(
+      this.createTrade(
+        "buy",
+        symbol,
+        quantity,
+        adjustedPrice,
+        candle.timestamp,
+        commission,
+        context
+      )
+    );
   }
 
   sell(
@@ -190,7 +201,8 @@ if (totalCost > this.cash) {
     quantity: number,
     candle: Candle,
     executionPrice: number =
-      candle.close
+      candle.close,
+    context?: TradeContext
   ): void {
     this.validateOrder(
       symbol,
@@ -263,14 +275,17 @@ if (tradePnl > 0) {
       candle.close
     );
 
-    this.trades.push({
-      side: "sell",
-      symbol,
-      quantity,
-      price: adjustedPrice,
-      timestamp: candle.timestamp,
-      commission
-    });
+    this.trades.push(
+      this.createTrade(
+        "sell",
+        symbol,
+        quantity,
+        adjustedPrice,
+        candle.timestamp,
+        commission,
+        context
+      )
+    );
   }
 
   getEstimatedBuyQuantity(
@@ -470,6 +485,43 @@ if (tradePnl > 0) {
       unrealizedPnl:
         this.getUnrealizedPnl()
     };
+  }
+
+  private createTrade(
+    side: OrderSide,
+    symbol: string,
+    quantity: number,
+    price: number,
+    timestamp: Date,
+    commission: number,
+    context?: TradeContext
+  ): Trade {
+    this.tradeSequence++;
+
+    const day = timestamp
+      .toISOString()
+      .slice(0, 10);
+
+    const trade: Trade = {
+      id: `T-${day}-${String(this.tradeSequence).padStart(4, "0")}`,
+      side,
+      symbol,
+      quantity,
+      price,
+      timestamp,
+      commission,
+      reason:
+        context?.reason ??
+        (side === "buy"
+          ? "BUY_STRATEGY"
+          : "SELL_STRATEGY")
+    };
+
+    if (context?.detail) {
+      trade.detail = context.detail;
+    }
+
+    return trade;
   }
 
   private validateOrder(

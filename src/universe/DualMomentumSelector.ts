@@ -8,6 +8,7 @@ import {
   DEFAULT_UNIVERSE_FILTER,
   type UniverseFilterOptions
 } from "./UniverseFilter.js";
+import { DEFAULT_MOMENTUM_FALLBACK_SYMBOL } from "../config/StrategyConfig.js";
 import type { SelectionSnapshot } from "./PointInTimeSelector.js";
 
 export interface DualMomentumSelectorOptions {
@@ -15,6 +16,7 @@ export interface DualMomentumSelectorOptions {
   absoluteReturnMin?: number;
   topCount?: number;
   filter?: UniverseFilterOptions;
+  fallbackSymbol?: string | null;
 }
 
 export const DEFAULT_DUAL_MOMENTUM_OPTIONS: Required<
@@ -23,7 +25,9 @@ export const DEFAULT_DUAL_MOMENTUM_OPTIONS: Required<
   lookbackDays: 126,
   absoluteReturnMin: 0,
   topCount: 1,
-  filter: DEFAULT_UNIVERSE_FILTER
+  filter: DEFAULT_UNIVERSE_FILTER,
+  fallbackSymbol:
+    DEFAULT_MOMENTUM_FALLBACK_SYMBOL
 };
 
 function candlesThroughDate(
@@ -104,8 +108,10 @@ export function selectDualMomentumAtDate(
   );
 
   const winner = ranked[0];
+  const momentumSymbol =
+    winner?.symbol ?? null;
 
-  const selectedSymbols =
+  let selectedSymbols =
     winner &&
     winner.trailingReturn >
       resolved.absoluteReturnMin
@@ -114,12 +120,27 @@ export function selectDualMomentumAtDate(
           .map((entry) => entry.symbol)
       : [];
 
+  let usedFallback = false;
+
+  if (
+    selectedSymbols.length === 0 &&
+    resolved.fallbackSymbol
+  ) {
+    selectedSymbols = [
+      resolved.fallbackSymbol
+    ];
+
+    usedFallback = true;
+  }
+
   return {
     asOfDate,
     selectedSymbols,
     scores: ranked.map((entry) => ({
       symbol: entry.symbol,
       score: entry.score
-    }))
+    })),
+    momentumSymbol,
+    usedFallback
   };
 }

@@ -56,6 +56,20 @@ export const TUNED_INTRADAY_OPTIONS: IntradayMomentumOptions = {
   entryWindowEndMinutes: 17 * 60
 };
 
+export const HYBRID_INTRADAY_OPTIONS: IntradayMomentumOptions = {
+  signalParameters: {
+    minimumRelativeVolume: 1.2,
+    minimumBullishRSI: 52,
+    maximumBearishRSI: 38
+  },
+  atrMultiplier: 3.0,
+  riskPercent: 1,
+  maxPositionPercent: 100,
+  rewardRiskRatio: 2.5,
+  entryWindowStartMinutes: 14 * 60 + 30,
+  entryWindowEndMinutes: 17 * 60
+};
+
 export class IntradayMomentumStrategy
   implements IntradayStrategy {
 

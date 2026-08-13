@@ -107,7 +107,67 @@ describe("DualMomentumSelector", () => {
     ).toBe("QQQ");
   });
 
-  test("returns cash when absolute momentum is negative", () => {
+  test("returns cash when absolute momentum is negative and fallback disabled", () => {
+    const candlesBySymbol = new Map([
+      [
+        "QQQ",
+        createDailyCandles(
+          "QQQ",
+          "2026-01-01",
+          Array.from(
+            { length: 160 },
+            (_, index) =>
+              200 - index * 0.6
+          )
+        )
+      ],
+      [
+        "IWM",
+        createDailyCandles(
+          "IWM",
+          "2026-01-01",
+          Array.from(
+            { length: 160 },
+            (_, index) =>
+              180 - index * 0.5
+          )
+        )
+      ],
+      [
+        "SPY",
+        createDailyCandles(
+          "SPY",
+          "2026-01-01",
+          Array.from(
+            { length: 160 },
+            (_, index) =>
+              190 - index * 0.4
+          )
+        )
+      ]
+    ]);
+
+    const selection = selectDualMomentumAtDate(
+      new Date("2026-06-01"),
+      candidates,
+      candlesBySymbol,
+      {
+        lookbackDays: 126,
+        fallbackSymbol: null,
+        filter: {
+          minAvgDailyVolume: 100_000,
+          minAvgDailyDollarVolume: 1_000_000,
+          minPrice: 10,
+          minHistoryDays: 30
+        }
+      }
+    );
+
+    expect(selection.selectedSymbols).toEqual([]);
+    expect(selection.usedFallback).toBe(false);
+  });
+
+  test("uses SPY fallback when absolute momentum is negative", () => {
     const candlesBySymbol = new Map([
       [
         "QQQ",
@@ -162,6 +222,10 @@ describe("DualMomentumSelector", () => {
       }
     );
 
-    expect(selection.selectedSymbols).toEqual([]);
+    expect(selection.selectedSymbols).toEqual([
+      "SPY"
+    ]);
+    expect(selection.usedFallback).toBe(true);
+    expect(selection.momentumSymbol).toBe("IWM");
   });
 });

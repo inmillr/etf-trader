@@ -15,8 +15,12 @@ import {
 import type { EquityPoint } from "./BacktestEngine.js";
 import {
   PortfolioSimulator,
-  type PortfolioSimulatorOptions
+  type PortfolioSimulatorOptions,
+  type Trade
 } from "./PortfolioSimulator.js";
+import type {
+  TradeContext
+} from "./TradeReason.js";
 import type {
   Strategy,
   StrategyOrder
@@ -64,6 +68,7 @@ export interface MultiSymbolBacktestResult {
     date: string;
     symbols: string[];
   }>;
+  tradeLog: Trade[];
 }
 
 function dayKey(date: Date): string {
@@ -255,6 +260,9 @@ export class MultiSymbolBacktestEngine {
           rotation
         );
 
+        const targetSymbol =
+          activeSymbols[0] ?? null;
+
         rebalanceCount++;
 
         selections.push({
@@ -263,6 +271,8 @@ export class MultiSymbolBacktestEngine {
         });
 
         const dayCandles = new Map<string, Candle>();
+        const heldBeforeRebalance =
+          heldSymbol;
 
         for (const symbol of candlesBySymbol.keys()) {
           const candle = candlesByDay
@@ -288,11 +298,29 @@ export class MultiSymbolBacktestEngine {
             );
 
             if (candle) {
+              const sellContext: TradeContext =
+                targetSymbol
+                  ? selection.usedFallback
+                    ? {
+                        reason: "SELL_ROTATION",
+                        detail: `Rotate to ${targetSymbol} (${targetSymbol} fallback)`
+                      }
+                    : {
+                        reason: "SELL_ROTATION",
+                        detail: `Rotate to ${targetSymbol}`
+                      }
+                  : {
+                      reason: "SELL_CASH",
+                      detail:
+                        "Absolute momentum negative — move to cash"
+                    };
+
               portfolio.sell(
                 position.symbol,
                 position.quantity,
                 candle,
-                candle.open
+                candle.open,
+                sellContext
               );
 
               if (heldSymbol === position.symbol) {
@@ -325,11 +353,30 @@ export class MultiSymbolBacktestEngine {
               );
 
             if (quantity > 0) {
+              const buyContext: TradeContext =
+                heldBeforeRebalance &&
+                heldBeforeRebalance !== symbol
+                  ? {
+                      reason: "BUY_ROTATION",
+                      detail: `Rotate from ${heldBeforeRebalance} to ${symbol}`
+                    }
+                  : targetSymbol === symbol &&
+                      selection.usedFallback
+                    ? {
+                        reason: "BUY_REBALANCE",
+                        detail: `Enter ${symbol} (${symbol} fallback — absolute momentum failed)`
+                      }
+                    : {
+                        reason: "BUY_REBALANCE",
+                        detail: `Weekly rebalance entry into ${symbol}`
+                      };
+
               portfolio.buy(
                 symbol,
                 quantity,
                 candle,
-                candle.open
+                candle.open,
+                buyContext
               );
 
               heldSymbol = symbol;
@@ -479,7 +526,8 @@ export class MultiSymbolBacktestEngine {
           : 0,
       equityCurve,
       rebalanceCount,
-      selections
+      selections,
+      tradeLog: portfolio.getTrades()
     };
   }
 
@@ -514,7 +562,11 @@ export class MultiSymbolBacktestEngine {
           candle.symbol,
           quantity,
           candle,
-          candle.open
+          candle.open,
+          {
+            reason: "BUY_STRATEGY",
+            detail: "Strategy buy signal"
+          }
         );
       }
 
@@ -539,7 +591,11 @@ export class MultiSymbolBacktestEngine {
         candle.symbol,
         quantity,
         candle,
-        candle.open
+        candle.open,
+        {
+          reason: "SELL_STRATEGY",
+          detail: "Strategy sell signal"
+        }
       );
     }
   }

@@ -43,6 +43,8 @@ export interface SelectionSnapshot {
     symbol: string;
     score: number;
   }>;
+  momentumSymbol?: string | null;
+  usedFallback?: boolean;
 }
 
 function candlesThroughDate(

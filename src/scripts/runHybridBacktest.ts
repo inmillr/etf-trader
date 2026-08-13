@@ -7,13 +7,23 @@ import {
   DEFAULT_INITIAL_CASH,
   DEFAULT_PORTFOLIO
 } from "../config/PortfolioConfig.js";
+import {
+  HYBRID_ROTATION_POLICY,
+  HYBRID_SELECTION_LOOKBACK_DAYS,
+  HYBRID_TREND_GATE,
+  HYBRID_WARMUP_DAYS,
+  TUNED_UNIVERSE_FILTER
+} from "../config/StrategyConfig.js";
 import { SQLiteCandleRepository } from "../data/SQLiteCandleRepository.js";
 import {
   IntradayMomentumStrategy,
-  TUNED_INTRADAY_OPTIONS
+  HYBRID_INTRADAY_OPTIONS
 } from "../strategy/IntradayMomentumStrategy.js";
 import type { Candle, Timeframe } from "../types/market.js";
-import { StaticUniverseProvider } from "../universe/EtfUniverse.js";
+import {
+  LIQUID_ETF_UNIVERSE,
+  StaticUniverseProvider
+} from "../universe/EtfUniverse.js";
 import { DEFAULT_SCORING_WEIGHTS } from "../universe/ScoringFactors.js";
 
 const databasePath =
@@ -27,29 +37,23 @@ const endString =
   process.argv[3] ?? "2026-08-08";
 
 const fastPeriod = Number(
-  process.argv[4] ?? 20
+  process.argv[4] ??
+    HYBRID_TREND_GATE.fastPeriod
 );
 
 const slowPeriod = Number(
-  process.argv[5] ?? 50
+  process.argv[5] ??
+    HYBRID_TREND_GATE.slowPeriod
 );
 
 const initialCash = DEFAULT_INITIAL_CASH;
-const selectionLookbackDays = 30;
-const warmupDays = selectionLookbackDays + slowPeriod + 5;
+const selectionLookbackDays =
+  HYBRID_SELECTION_LOOKBACK_DAYS;
+const warmupDays = HYBRID_WARMUP_DAYS;
 
-const tunedFilter = {
-  minAvgDailyVolume: 500_000,
-  minAvgDailyDollarVolume: 10_000_000,
-  minPrice: 10,
-  minHistoryDays: 30,
-  maxAtrPercent: 5.0
-};
+const tunedFilter = TUNED_UNIVERSE_FILTER;
 
-const rotationPolicy = {
-  minHoldDays: 5,
-  minScoreImprovement: 5
-};
+const rotationPolicy = HYBRID_ROTATION_POLICY;
 
 const start = new Date(startString);
 const end = new Date(endString);
@@ -85,7 +89,9 @@ try {
   );
 
   const provider =
-    new StaticUniverseProvider();
+    new StaticUniverseProvider(
+      LIQUID_ETF_UNIVERSE
+    );
 
   const candidates =
     await provider.getCandidates();
@@ -153,7 +159,7 @@ try {
     intradayCandlesBySymbol,
     () =>
       new IntradayMomentumStrategy(
-        TUNED_INTRADAY_OPTIONS
+        HYBRID_INTRADAY_OPTIONS
       ),
     {
       start,
@@ -218,7 +224,7 @@ try {
     `Intraday symbols:    ${result.intradaySymbols.length} ETFs`
   );
   console.log(
-    `Universe (daily):    ${availableCandidates.length} ETFs`
+    `Universe:              SPY, QQQ, IWM, DIA (liquid)`
   );
   console.log(
     `Initial cash:        $${initialCash.toLocaleString()}`

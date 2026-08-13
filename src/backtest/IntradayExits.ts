@@ -3,6 +3,7 @@ import {
   PortfolioSimulator,
   type OrderSide
 } from "./PortfolioSimulator.js";
+import type { TradeContext } from "./TradeReason.js";
 import type { PositionRiskLevels } from "../strategy/IntradayMomentumStrategy.js";
 
 export type StopTargetExitReason =
@@ -73,7 +74,8 @@ export function closePositionAtPrice(
   portfolio: PortfolioSimulator,
   candle: Candle,
   quantity: number,
-  price: number
+  price: number,
+  context?: TradeContext
 ): void {
   if (quantity <= 0) {
     return;
@@ -83,7 +85,8 @@ export function closePositionAtPrice(
     candle.symbol,
     quantity,
     candle,
-    price
+    price,
+    context
   );
 }
 

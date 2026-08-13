@@ -3,28 +3,35 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { BacktestDataLoader } from "../backtest/BacktestDataLoader.js";
-import { MultiSymbolBacktestEngine } from "../backtest/MultiSymbolBacktestEngine.js";
+import { MultiSymbolHybridBacktestEngine } from "../backtest/MultiSymbolHybridBacktestEngine.js";
 import { calculatePeriodReturnMetrics } from "../backtest/ReturnMetrics.js";
+import type { Trade } from "../backtest/PortfolioSimulator.js";
+import {
+  formatTradeReason,
+  type TradeReason
+} from "../backtest/TradeReason.js";
 import { DEFAULT_PORTFOLIO } from "../config/PortfolioConfig.js";
 import {
-  DEFAULT_LOOKBACK_DAYS,
-  DEFAULT_ROTATION_POLICY,
+  HYBRID_INTRADAY_OPTIONS,
+  HYBRID_ROTATION_POLICY,
+  HYBRID_SELECTION_LOOKBACK_DAYS,
+  HYBRID_TREND_GATE,
+  HYBRID_WARMUP_DAYS,
   TUNED_UNIVERSE_FILTER
 } from "../config/StrategyConfig.js";
 import { SQLiteCandleRepository } from "../data/SQLiteCandleRepository.js";
 import { aggregateToDailyCandles } from "../market/DailyCandleAggregator.js";
-import { HoldStrategy } from "../strategy/HoldStrategy.js";
-import type { Candle } from "../types/market.js";
 import {
-  evaluateDualMomentumSignal,
+  evaluateHybridSignal,
   findLatestTradingDay,
-  type DualMomentumSignalResult
-} from "../signals/DualMomentumSignal.js";
-import { selectDualMomentumAtDate } from "../universe/DualMomentumSelector.js";
+  type HybridSignalResult
+} from "../signals/HybridSignal.js";
 import {
-  LIQUID_ETF_UNIVERSE,
-  StaticUniverseProvider
-} from "../universe/EtfUniverse.js";
+  IntradayMomentumStrategy,
+  HYBRID_INTRADAY_OPTIONS
+} from "../strategy/IntradayMomentumStrategy.js";
+import type { Candle, Timeframe } from "../types/market.js";
+import { StaticUniverseProvider, LIQUID_ETF_UNIVERSE } from "../universe/EtfUniverse.js";
 import { DEFAULT_SCORING_WEIGHTS } from "../universe/ScoringFactors.js";
 
 export interface SignalState {
@@ -33,11 +40,25 @@ export interface SignalState {
 }
 
 export interface DashboardSignalResponse
-  extends DualMomentumSignalResult {
+  extends HybridSignalResult {
   heldSinceDay: string | null;
 }
 
+export interface DashboardTrade {
+  id: string;
+  date: string;
+  side: "buy" | "sell";
+  symbol: string;
+  quantity: number;
+  price: number;
+  commission: number;
+  reason: TradeReason;
+  reasonLabel: string;
+  detail?: string;
+}
+
 export interface DashboardBacktestResponse {
+  strategy: "hybrid";
   start: string;
   end: string;
   lookbackDays: number;
@@ -47,7 +68,10 @@ export interface DashboardBacktestResponse {
   maxDrawdown: number;
   trades: number;
   exposurePercent: number;
-  cashRebalances: number;
+  stopExits: number;
+  targetExits: number;
+  trendExits: number;
+  rotationExits: number;
   spyReturn: number;
   metrics: ReturnType<
     typeof calculatePeriodReturnMetrics
@@ -60,6 +84,7 @@ export interface DashboardBacktestResponse {
     date: string;
     symbols: string[];
   }>;
+  tradeLog: DashboardTrade[];
 }
 
 export interface JournalEntry {
@@ -74,6 +99,7 @@ export interface DashboardJournalResponse {
   start: string;
   end: string;
   entries: JournalEntry[];
+  trades: DashboardTrade[];
   summary: {
     returnPercent: number;
     maxDrawdown: number;
@@ -165,7 +191,7 @@ export class StrategyDashboardService {
   ): Promise<DashboardSignalResponse> {
     const lookbackDays =
       options.lookbackDays ??
-      DEFAULT_LOOKBACK_DAYS;
+      HYBRID_SELECTION_LOOKBACK_DAYS;
 
     const savedState =
       this.loadSignalState();
@@ -181,17 +207,19 @@ export class StrategyDashboardService {
         : savedState?.since ?? null;
 
     const {
-      candlesBySymbol,
+      dailyCandlesBySymbol,
+      intradayCandlesBySymbol,
       availableCandidates
-    } = await this.loadUniverseData(
-      lookbackDays,
-      options.date
-    );
+    } = await this.loadHybridData({
+      endDateString: options.date,
+      intradayStartString:
+        options.date
+    });
 
     const signalDay =
       options.date ??
       findLatestTradingDay(
-        candlesBySymbol
+        dailyCandlesBySymbol
       );
 
     if (!signalDay) {
@@ -200,22 +228,19 @@ export class StrategyDashboardService {
       );
     }
 
-    const signal =
-      evaluateDualMomentumSignal(
-        signalDay,
-        availableCandidates,
-        candlesBySymbol,
-        {
-          lookbackDays,
-          rotation: DEFAULT_ROTATION_POLICY,
-          selector: {
-            lookbackDays,
-            filter: TUNED_UNIVERSE_FILTER
-          },
-          heldSymbol,
-          heldSinceDay
-        }
-      );
+    const signal = evaluateHybridSignal(
+      signalDay,
+      availableCandidates,
+      dailyCandlesBySymbol,
+      intradayCandlesBySymbol,
+      {
+        lookbackDays,
+        rotation: HYBRID_ROTATION_POLICY,
+        trendGate: HYBRID_TREND_GATE,
+        heldSymbol,
+        heldSinceDay
+      }
+    );
 
     return {
       ...signal,
@@ -226,35 +251,40 @@ export class StrategyDashboardService {
   async getBacktest(
     startString: string,
     endString: string,
-    lookbackDays = DEFAULT_LOOKBACK_DAYS
+    lookbackDays = HYBRID_SELECTION_LOOKBACK_DAYS
   ): Promise<DashboardBacktestResponse> {
     const start = new Date(startString);
     const end = new Date(endString);
 
     const {
-      candlesBySymbol,
+      dailyCandlesBySymbol,
+      intradayCandlesBySymbol,
       availableCandidates
-    } = await this.loadUniverseData(
-      lookbackDays,
-      endString,
-      startString
-    );
+    } = await this.loadHybridData({
+      startDateString: startString,
+      endDateString: endString,
+      intradayStartString: startString,
+      intradayEndString: endString
+    });
 
     const engine =
-      new MultiSymbolBacktestEngine();
+      new MultiSymbolHybridBacktestEngine();
 
     const result = engine.run(
       availableCandidates,
-      candlesBySymbol,
-      () => new HoldStrategy(),
+      dailyCandlesBySymbol,
+      intradayCandlesBySymbol,
+      () =>
+        new IntradayMomentumStrategy(
+          HYBRID_INTRADAY_OPTIONS
+        ),
       {
         start,
         end,
         topCount: 1,
         selectionLookbackDays: lookbackDays,
         rebalanceFrequency: "weekly",
-        enterOnSelection: true,
-        rotation: DEFAULT_ROTATION_POLICY,
+        rotation: HYBRID_ROTATION_POLICY,
         portfolio: DEFAULT_PORTFOLIO,
         selector: {
           benchmarkSymbol: "SPY",
@@ -263,22 +293,7 @@ export class StrategyDashboardService {
           weights: DEFAULT_SCORING_WEIGHTS,
           filter: TUNED_UNIVERSE_FILTER
         },
-        selectAtDate: (
-          asOfDate,
-          available,
-          candles,
-          context
-        ) =>
-          selectDualMomentumAtDate(
-            asOfDate,
-            available,
-            candles,
-            {
-              lookbackDays,
-              topCount: context.topCount,
-              filter: TUNED_UNIVERSE_FILTER
-            }
-          )
+        trendGate: HYBRID_TREND_GATE
       }
     );
 
@@ -288,7 +303,7 @@ export class StrategyDashboardService {
       );
 
     const spyCandles =
-      (candlesBySymbol.get("SPY") ?? [])
+      (dailyCandlesBySymbol.get("SPY") ?? [])
         .filter(
           (candle) =>
             candle.timestamp >= start &&
@@ -307,6 +322,7 @@ export class StrategyDashboardService {
         : 0;
 
     return {
+      strategy: "hybrid",
       start: startString,
       end: endString,
       lookbackDays,
@@ -316,11 +332,10 @@ export class StrategyDashboardService {
       maxDrawdown: result.maxDrawdown,
       trades: result.trades,
       exposurePercent: result.exposurePercent,
-      cashRebalances:
-        result.selections.filter(
-          (selection) =>
-            selection.symbols.length === 0
-        ).length,
+      stopExits: result.stopExits,
+      targetExits: result.targetExits,
+      trendExits: result.trendExits,
+      rotationExits: result.rotationExits,
       spyReturn,
       metrics,
       equityCurve: result.equityCurve.map(
@@ -329,14 +344,17 @@ export class StrategyDashboardService {
           equity: point.equity
         })
       ),
-      selections: result.selections
+      selections: result.selections,
+      tradeLog: serializeTrades(
+        result.tradeLog
+      )
     };
   }
 
   async getJournal(
     startString: string,
     endString: string,
-    lookbackDays = DEFAULT_LOOKBACK_DAYS
+    lookbackDays = HYBRID_SELECTION_LOOKBACK_DAYS
   ): Promise<DashboardJournalResponse> {
     const backtest =
       await this.getBacktest(
@@ -384,6 +402,7 @@ export class StrategyDashboardService {
       start: startString,
       end: endString,
       entries,
+      trades: backtest.tradeLog,
       summary: {
         returnPercent: backtest.returnPercent,
         maxDrawdown: backtest.maxDrawdown,
@@ -392,17 +411,22 @@ export class StrategyDashboardService {
     };
   }
 
-  private async loadUniverseData(
-    lookbackDays: number,
-    endDateString?: string,
-    startDateString?: string
-  ): Promise<{
-    candlesBySymbol: Map<string, Candle[]>;
-    availableCandidates: ReturnType<
-      StaticUniverseProvider["getCandidates"]
-    > extends Promise<infer T>
-      ? T
-      : never;
+  private async loadHybridData(options: {
+    startDateString?: string;
+    endDateString?: string;
+    intradayStartString?: string;
+    intradayEndString?: string;
+  }): Promise<{
+    dailyCandlesBySymbol: Map<string, Candle[]>;
+    intradayCandlesBySymbol: Map<
+      string,
+      Candle[]
+    >;
+    availableCandidates: Awaited<
+      ReturnType<
+        StaticUniverseProvider["getCandidates"]
+      >
+    >;
   }> {
     const repository =
       new SQLiteCandleRepository(
@@ -422,65 +446,100 @@ export class StrategyDashboardService {
       const candidates =
         await provider.getCandidates();
 
-      const end = endDateString
-        ? new Date(`${endDateString}T23:59:59.999Z`)
+      const end = options.endDateString
+        ? new Date(
+            `${options.endDateString}T23:59:59.999Z`
+          )
         : new Date();
 
-      const dataStart = new Date(end);
+      const dailyStart = new Date(end);
 
-      if (startDateString) {
-        dataStart.setTime(
+      if (options.startDateString) {
+        dailyStart.setTime(
           new Date(
-            `${startDateString}T00:00:00.000Z`
+            `${options.startDateString}T00:00:00.000Z`
           ).getTime()
         );
 
-        dataStart.setUTCDate(
-          dataStart.getUTCDate() -
-          lookbackDays -
-          35
+        dailyStart.setUTCDate(
+          dailyStart.getUTCDate() -
+            HYBRID_WARMUP_DAYS
         );
       } else {
-        dataStart.setUTCDate(
-          dataStart.getUTCDate() -
-          (lookbackDays + 252)
+        dailyStart.setUTCDate(
+          dailyStart.getUTCDate() -
+            (HYBRID_WARMUP_DAYS + 252)
         );
       }
 
-      const candlesBySymbol =
+      const intradayStart =
+        options.intradayStartString
+          ? new Date(
+              `${options.intradayStartString}T00:00:00.000Z`
+            )
+          : new Date(dailyStart);
+
+      const intradayEnd =
+        options.intradayEndString
+          ? new Date(
+              `${options.intradayEndString}T23:59:59.999Z`
+            )
+          : end;
+
+      const symbols = [
+        ...new Set([
+          ...candidates.map(
+            (candidate) => candidate.symbol
+          ),
+          "SPY"
+        ])
+      ];
+
+      const dailyCandlesBySymbol =
         new Map<string, Candle[]>();
 
-      for (const candidate of candidates) {
-        candlesBySymbol.set(
-          candidate.symbol,
-          await this.loadDailyCandles(
+      const intradayCandlesBySymbol =
+        new Map<string, Candle[]>();
+
+      for (const symbol of symbols) {
+        dailyCandlesBySymbol.set(
+          symbol,
+          await this.loadCandles(
             loader,
-            candidate.symbol,
-            dataStart,
+            symbol,
+            "1d",
+            dailyStart,
             end
           )
         );
-      }
 
-      candlesBySymbol.set(
-        "SPY",
-        await this.loadDailyCandles(
-          loader,
-          "SPY",
-          dataStart,
-          end
-        )
-      );
+        const intraday =
+          await this.loadCandles(
+            loader,
+            symbol,
+            "5m",
+            intradayStart,
+            intradayEnd
+          );
+
+        if (intraday.length > 0) {
+          intradayCandlesBySymbol.set(
+            symbol,
+            intraday
+          );
+        }
+      }
 
       const availableCandidates =
         candidates.filter((candidate) =>
-          (candlesBySymbol.get(
+          (dailyCandlesBySymbol.get(
             candidate.symbol
           )?.length ?? 0) > 0
         );
 
       return {
-        candlesBySymbol,
+        dailyCandlesBySymbol,
+        intradayCandlesBySymbol,
         availableCandidates
       };
     } finally {
@@ -488,20 +547,24 @@ export class StrategyDashboardService {
     }
   }
 
-  private async loadDailyCandles(
+  private async loadCandles(
     loader: BacktestDataLoader,
     symbol: string,
+    timeframe: Timeframe,
     rangeStart: Date,
     rangeEnd: Date
   ): Promise<Candle[]> {
     let candles = await loader.load({
       symbol,
-      timeframe: "1d",
+      timeframe,
       start: rangeStart,
       end: rangeEnd
     });
 
-    if (candles.length === 0) {
+    if (
+      candles.length === 0 &&
+      timeframe === "1d"
+    ) {
       const intraday = await loader.load({
         symbol,
         timeframe: "5m",
@@ -518,6 +581,27 @@ export class StrategyDashboardService {
   }
 }
 
+function serializeTrades(
+  trades: Trade[]
+): DashboardTrade[] {
+  return trades.map((trade) => ({
+    id: trade.id,
+    date: dayKey(trade.timestamp),
+    side: trade.side,
+    symbol: trade.symbol,
+    quantity: trade.quantity,
+    price: trade.price,
+    commission: trade.commission,
+    reason: trade.reason,
+    reasonLabel: formatTradeReason(
+      trade.reason
+    ),
+    ...(trade.detail
+      ? { detail: trade.detail }
+      : {})
+  }));
+}
+
 function activeSymbolOnDay(
   day: string,
   selections: Array<{
@@ -525,7 +609,7 @@ function activeSymbolOnDay(
     symbols: string[];
   }>
 ): string {
-  let symbol = "(cash)";
+  let symbol = "(flat)";
 
   for (const selection of selections) {
     if (selection.date > day) {
@@ -533,7 +617,7 @@ function activeSymbolOnDay(
     }
 
     symbol =
-      selection.symbols[0] ?? "(cash)";
+      selection.symbols[0] ?? "(flat)";
   }
 
   return symbol;

@@ -1,4 +1,5 @@
 export interface DashboardSignalResponse {
+  strategy: "hybrid";
   signalDate: string;
   selectionAsOfDate: string;
   action: string;
@@ -6,17 +7,35 @@ export interface DashboardSignalResponse {
   heldSymbol: string | null;
   rawPick: string | null;
   isRebalanceDay: boolean;
-  absoluteMomentumPassed: boolean;
-  rotationBlocked: boolean;
+  trendBullish: boolean;
+  bearishCrossover: boolean;
+  intradaySetup: boolean;
+  inEntryWindow: boolean;
+  trendFast: number | null;
+  trendSlow: number | null;
   rankings: Array<{
     symbol: string;
-    trailingReturn: number;
+    score: number;
   }>;
   reason: string;
   heldSinceDay?: string | null;
 }
 
+export interface DashboardTrade {
+  id: string;
+  date: string;
+  side: "buy" | "sell";
+  symbol: string;
+  quantity: number;
+  price: number;
+  commission: number;
+  reason: string;
+  reasonLabel: string;
+  detail?: string;
+}
+
 export interface DashboardBacktestResponse {
+  strategy: "hybrid";
   start: string;
   end: string;
   lookbackDays: number;
@@ -26,7 +45,10 @@ export interface DashboardBacktestResponse {
   maxDrawdown: number;
   trades: number;
   exposurePercent: number;
-  cashRebalances: number;
+  stopExits: number;
+  targetExits: number;
+  trendExits: number;
+  rotationExits: number;
   spyReturn: number;
   metrics: Record<string, number>;
   equityCurve: Array<{
@@ -37,6 +59,7 @@ export interface DashboardBacktestResponse {
     date: string;
     symbols: string[];
   }>;
+  tradeLog: DashboardTrade[];
 }
 
 export interface JournalEntry {
@@ -51,6 +74,7 @@ export interface DashboardJournalResponse {
   start: string;
   end: string;
   entries: JournalEntry[];
+  trades: DashboardTrade[];
   summary: {
     returnPercent: number;
     maxDrawdown: number;
