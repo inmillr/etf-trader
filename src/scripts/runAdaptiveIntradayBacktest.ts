@@ -3,6 +3,10 @@ import "dotenv/config";
 import { BacktestDataLoader } from "../backtest/BacktestDataLoader.js";
 import { MultiSymbolIntradayBacktestEngine } from "../backtest/MultiSymbolIntradayBacktestEngine.js";
 import { calculatePeriodReturnMetrics } from "../backtest/ReturnMetrics.js";
+import {
+  DEFAULT_INITIAL_CASH,
+  DEFAULT_PORTFOLIO
+} from "../config/PortfolioConfig.js";
 import { SQLiteCandleRepository } from "../data/SQLiteCandleRepository.js";
 import {
   IntradayMomentumStrategy,
@@ -24,7 +28,7 @@ const startString =
 const endString =
   process.argv[3] ?? "2026-08-08";
 
-const initialCash = 10_000;
+const initialCash = DEFAULT_INITIAL_CASH;
 const selectionLookbackDays = 30;
 const slowPeriod = 50;
 const warmupDays = selectionLookbackDays + slowPeriod + 5;
@@ -157,11 +161,7 @@ try {
       rebalanceFrequency: "weekly",
       rotation: rotationPolicy,
       closeAtEndOfDay: true,
-      portfolio: {
-        initialCash,
-        commissionPerTrade: 1,
-        slippagePercent: 0.05
-      },
+      portfolio: DEFAULT_PORTFOLIO,
       selector: {
         benchmarkSymbol: "SPY",
         lookbackDays: selectionLookbackDays,

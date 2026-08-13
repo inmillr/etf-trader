@@ -3,6 +3,10 @@ import "dotenv/config";
 import { BacktestDataLoader } from "../backtest/BacktestDataLoader.js";
 import { MultiSymbolBacktestEngine } from "../backtest/MultiSymbolBacktestEngine.js";
 import { calculatePeriodReturnMetrics } from "../backtest/ReturnMetrics.js";
+import {
+  DEFAULT_INITIAL_CASH,
+  DEFAULT_PORTFOLIO
+} from "../config/PortfolioConfig.js";
 import { SQLiteCandleRepository } from "../data/SQLiteCandleRepository.js";
 import { aggregateToDailyCandles } from "../market/DailyCandleAggregator.js";
 import { HoldStrategy } from "../strategy/HoldStrategy.js";
@@ -54,7 +58,7 @@ const slowPeriod = Number(
   positional[5] ?? 50
 );
 
-const initialCash = 10_000;
+const initialCash = DEFAULT_INITIAL_CASH;
 
 const tunedFilter = {
   minAvgDailyVolume: 500_000,
@@ -237,11 +241,7 @@ try {
       )?.length ?? 0) > 0
     );
 
-  const portfolio = {
-    initialCash,
-    commissionPerTrade: 1,
-    slippagePercent: 0.05
-  };
+  const portfolio = DEFAULT_PORTFOLIO;
 
   const engine =
     new MultiSymbolBacktestEngine();

@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { BacktestDataLoader } from "../backtest/BacktestDataLoader.js";
 import { MultiSymbolIntradayBacktestEngine } from "../backtest/MultiSymbolIntradayBacktestEngine.js";
+import { DEFAULT_PORTFOLIO } from "../config/PortfolioConfig.js";
 import { SQLiteCandleRepository } from "../data/SQLiteCandleRepository.js";
 import {
   IntradayMomentumStrategy,
@@ -153,11 +154,7 @@ try {
         rebalanceFrequency: "weekly",
         rotation: rotationPolicy,
         closeAtEndOfDay: true,
-        portfolio: {
-          initialCash: 10_000,
-          commissionPerTrade: 1,
-          slippagePercent: 0.05
-        },
+        portfolio: DEFAULT_PORTFOLIO,
         selector: {
           benchmarkSymbol: "SPY",
           lookbackDays: selectionLookbackDays,

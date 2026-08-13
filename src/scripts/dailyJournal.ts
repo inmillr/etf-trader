@@ -2,6 +2,10 @@ import "dotenv/config";
 
 import { BacktestDataLoader } from "../backtest/BacktestDataLoader.js";
 import { MultiSymbolBacktestEngine } from "../backtest/MultiSymbolBacktestEngine.js";
+import {
+  DEFAULT_INITIAL_CASH,
+  DEFAULT_PORTFOLIO
+} from "../config/PortfolioConfig.js";
 import { SQLiteCandleRepository } from "../data/SQLiteCandleRepository.js";
 import { aggregateToDailyCandles } from "../market/DailyCandleAggregator.js";
 import { HoldStrategy } from "../strategy/HoldStrategy.js";
@@ -31,7 +35,7 @@ const lookbackDays = Number(
   args[2] ?? 126
 );
 
-const initialCash = 10_000;
+const initialCash = DEFAULT_INITIAL_CASH;
 const warmupDays = lookbackDays + 35;
 
 const tunedFilter = {
@@ -157,11 +161,7 @@ try {
       rebalanceFrequency: "weekly",
       enterOnSelection: true,
       rotation: rotationPolicy,
-      portfolio: {
-        initialCash,
-        commissionPerTrade: 1,
-        slippagePercent: 0.05
-      },
+      portfolio: DEFAULT_PORTFOLIO,
       selector: {
         benchmarkSymbol: "SPY",
         lookbackDays,

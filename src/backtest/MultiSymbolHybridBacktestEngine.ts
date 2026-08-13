@@ -165,7 +165,7 @@ export class MultiSymbolHybridBacktestEngine {
     const portfolio =
       new PortfolioSimulator(
         options.portfolio ?? {
-          initialCash: 10_000
+          initialCash: 1_000
         }
       );
 
