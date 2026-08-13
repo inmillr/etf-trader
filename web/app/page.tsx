@@ -1,11 +1,10 @@
-import "dotenv/config";
-
+import {
+  getDashboardBacktest,
+  getDashboardSignal
+} from "@/lib/dashboard";
 import { EquityChart } from "@/components/EquityChart";
 import { SignalCard } from "@/components/SignalCard";
 import { SiteHeader } from "@/components/SiteHeader";
-import {
-  StrategyDashboardService
-} from "@core/services/StrategyDashboardService";
 
 export const dynamic = "force-dynamic";
 
@@ -18,16 +17,11 @@ function formatPercent(
 }
 
 export default async function DashboardPage() {
-  const service =
-    new StrategyDashboardService();
-
-  let error: string | null = null;
-
   try {
     const [signal, backtest] =
       await Promise.all([
-        service.getSignal(),
-        service.getBacktest(
+        getDashboardSignal(),
+        getDashboardBacktest(
           "2025-01-01",
           "2026-08-08"
         )
@@ -130,7 +124,7 @@ export default async function DashboardPage() {
       </main>
     );
   } catch (loadError) {
-    error =
+    const error =
       loadError instanceof Error
         ? loadError.message
         : "Failed to load dashboard";

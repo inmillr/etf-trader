@@ -6,7 +6,7 @@ import { EquityChart } from "@/components/EquityChart";
 import { SiteHeader } from "@/components/SiteHeader";
 import type {
   DashboardJournalResponse
-} from "@core/services/StrategyDashboardService";
+} from "@/types/dashboard";
 
 export function JournalView({
   initialData

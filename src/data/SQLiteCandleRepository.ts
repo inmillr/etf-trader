@@ -12,19 +12,11 @@ export class SQLiteCandleRepository
   private readonly db: Database.Database;
 
   constructor(databasePath: string) {
-  console.log("A. Constructor started");
-
   this.db = new Database(databasePath);
-
-  console.log("B. Database opened");
 
   this.db.pragma("journal_mode = WAL");
 
-  console.log("C. WAL configured");
-
   this.initialize();
-
-  console.log("D. Database initialized");
   }
   close(): void {
   this.db.close();

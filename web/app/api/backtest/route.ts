@@ -1,8 +1,6 @@
-import "dotenv/config";
-
 import {
-  StrategyDashboardService
-} from "@core/services/StrategyDashboardService";
+  getDashboardBacktest
+} from "@/lib/dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,18 +20,15 @@ export async function GET(
       searchParams.get("end") ??
       "2026-08-08";
 
-    const lookbackDays = Number(
+    const lookback = Number(
       searchParams.get("lookback") ?? 126
     );
 
-    const service =
-      new StrategyDashboardService();
-
     const backtest =
-      await service.getBacktest(
+      await getDashboardBacktest(
         start,
         end,
-        lookbackDays
+        lookback
       );
 
     return Response.json(backtest);

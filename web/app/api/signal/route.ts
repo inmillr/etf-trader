@@ -1,18 +1,13 @@
-import "dotenv/config";
-
 import {
-  StrategyDashboardService
-} from "@core/services/StrategyDashboardService";
+  getDashboardSignal
+} from "@/lib/dashboard";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const service =
-      new StrategyDashboardService();
-
     const signal =
-      await service.getSignal();
+      await getDashboardSignal();
 
     return Response.json(signal);
   } catch (error) {

@@ -16,29 +16,8 @@ const nextConfig: NextConfig = {
   env: {
     PROJECT_ROOT: projectRoot
   },
-  outputFileTracingRoot: projectRoot,
-  experimental: {
-    externalDir: true
-  },
-  serverExternalPackages: [
-    "better-sqlite3"
-  ],
-  typescript: {
-    ignoreBuildErrors: false
-  },
   eslint: {
     ignoreDuringBuilds: true
-  },
-  webpack: (config) => {
-    config.resolve.extensionAlias = {
-      ".js": [
-        ".ts",
-        ".tsx",
-        ".js"
-      ]
-    };
-
-    return config;
   }
 };
 

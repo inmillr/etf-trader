@@ -1,6 +1,6 @@
 import type {
   DashboardSignalResponse
-} from "@core/services/StrategyDashboardService";
+} from "@/types/dashboard";
 
 function badgeClass(
   action: string
