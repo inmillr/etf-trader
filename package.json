@@ -16,7 +16,9 @@
     "backtest:adaptive": "node --import=tsx src/scripts/runAdaptiveBacktest.ts",
     "backtest:intraday": "node --import=tsx src/scripts/runAdaptiveIntradayBacktest.ts",
     "backtest:hybrid": "node --import=tsx src/scripts/runHybridBacktest.ts",
-    "backtest:dual-momentum": "node --import=tsx src/scripts/runAdaptiveBacktest.ts --compare"
+    "backtest:dual-momentum": "node --import=tsx src/scripts/runAdaptiveBacktest.ts --compare",
+    "dev:web": "npm run dev --prefix web",
+    "build:web": "npm run build --prefix web"
   },
   "keywords": [],
   "author": "",
