@@ -10,6 +10,7 @@ export type AutomationTrigger =
   | "startup";
 
 export interface AutomationSchedule {
+  backfillTimeEt: string;
   signalTimeEt: string;
   tradeTimeEt: string;
   timezone: string;
@@ -63,6 +64,7 @@ export interface AutomationStatusResponse {
   daemon: AutomationDaemonState;
   schedule: AutomationSchedule;
   nextRuns: {
+    backfill: string | null;
     signal: string | null;
     trade: string | null;
   };

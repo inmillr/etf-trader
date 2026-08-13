@@ -102,11 +102,13 @@ export interface AutomationStatusResponse {
     lastHeartbeat: string | null;
   };
   schedule: {
+    backfillTimeEt: string;
     signalTimeEt: string;
     tradeTimeEt: string;
     timezone: string;
   };
   nextRuns: {
+    backfill: string | null;
     signal: string | null;
     trade: string | null;
   };

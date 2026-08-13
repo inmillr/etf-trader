@@ -5,15 +5,18 @@ import {
   nextScheduledRun
 } from "../AutomationSchedule.js";
 
+const SCHEDULE = {
+  backfillTimeEt: "16:00",
+  signalTimeEt: "16:05",
+  tradeTimeEt: "09:35",
+  timezone: "America/New_York"
+};
+
 describe("AutomationSchedule", () => {
   test("nextScheduledRun returns a future weekday time", () => {
     const from = new Date("2026-08-13T20:00:00.000Z");
     const next = nextScheduledRun(
-      {
-        signalTimeEt: "16:05",
-        tradeTimeEt: "09:35",
-        timezone: "America/New_York"
-      },
+      SCHEDULE,
       "signal",
       from
     );
@@ -24,6 +27,27 @@ describe("AutomationSchedule", () => {
     );
   });
 
+  test("backfill is scheduled before signal on the same day", () => {
+    const from = new Date("2026-08-13T14:00:00.000Z");
+
+    const backfill = nextScheduledRun(
+      SCHEDULE,
+      "backfill",
+      from
+    );
+    const signal = nextScheduledRun(
+      SCHEDULE,
+      "signal",
+      from
+    );
+
+    expect(backfill).not.toBeNull();
+    expect(signal).not.toBeNull();
+    expect(backfill!.getTime()).toBeLessThan(
+      signal!.getTime()
+    );
+  });
+
   test("isJobDue skips weekends", () => {
     const saturday = new Date(
       "2026-08-15T16:10:00.000Z"
@@ -31,11 +55,7 @@ describe("AutomationSchedule", () => {
 
     expect(
       isJobDue(
-        {
-          signalTimeEt: "16:05",
-          tradeTimeEt: "09:35",
-          timezone: "America/New_York"
-        },
+        SCHEDULE,
         "signal",
         null,
         saturday
@@ -50,11 +70,7 @@ describe("AutomationSchedule", () => {
 
     expect(
       isJobDue(
-        {
-          signalTimeEt: "16:05",
-          tradeTimeEt: "09:35",
-          timezone: "America/New_York"
-        },
+        SCHEDULE,
         "signal",
         null,
         thursdayAfternoon
@@ -63,14 +79,34 @@ describe("AutomationSchedule", () => {
 
     expect(
       isJobDue(
-        {
-          signalTimeEt: "16:05",
-          tradeTimeEt: "09:35",
-          timezone: "America/New_York"
-        },
+        SCHEDULE,
         "signal",
         "2026-08-13",
         thursdayAfternoon
+      )
+    ).toBe(false);
+  });
+
+  test("isJobDue runs backfill at its scheduled time", () => {
+    const thursdayBeforeSignal = new Date(
+      "2026-08-13T20:02:00.000Z"
+    );
+
+    expect(
+      isJobDue(
+        SCHEDULE,
+        "backfill",
+        null,
+        thursdayBeforeSignal
+      )
+    ).toBe(true);
+
+    expect(
+      isJobDue(
+        SCHEDULE,
+        "signal",
+        null,
+        thursdayBeforeSignal
       )
     ).toBe(false);
   });

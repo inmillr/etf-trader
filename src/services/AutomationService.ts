@@ -81,6 +81,10 @@ export class AutomationService {
       },
       schedule: state.schedule,
       nextRuns: {
+        backfill: nextScheduledRun(
+          state.schedule,
+          "backfill"
+        )?.toISOString() ?? null,
         signal: nextScheduledRun(
           state.schedule,
           "signal"
@@ -253,7 +257,7 @@ export class AutomationService {
           ...(await this.getStatusWithMarket()),
           actionLog: buildControlActionLog(
             action,
-            "Scheduled jobs will run when the scheduler is on."
+            "Backfill, signal, and trade jobs will run on schedule when the scheduler is on."
           ),
           success: true,
           message: "Automation enabled"
@@ -570,6 +574,17 @@ export class AutomationService {
     }
 
     const ran: AutomationJob[] = [];
+
+    if (
+      isJobDue(
+        state.schedule,
+        "backfill",
+        state.lastRuns.backfill?.day ?? null
+      )
+    ) {
+      await this.runJob("backfill", "scheduled");
+      ran.push("backfill");
+    }
 
     if (
       isJobDue(

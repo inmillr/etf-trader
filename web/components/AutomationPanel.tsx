@@ -364,7 +364,8 @@ export function AutomationPanel() {
             <h2>Paper Automation</h2>
             <p className="muted">
               Daily aggressive momentum · scheduled
-              signal 4:05 PM ET · trade 9:35 AM ET
+              backfill 4:00 PM ET · signal 4:05 PM ET
+              · trade 9:35 AM ET
             </p>
           </div>
           {badge ? (
@@ -455,14 +456,14 @@ export function AutomationPanel() {
             <div style={{ marginTop: 20 }}>
               <h3>Automatic mode</h3>
               <p className="muted">
-                Start the scheduler, turn automation
-                on, and set{" "}
+                Start the scheduler and turn automation
+                on. Set{" "}
                 <code>
                   PAPER_TRADING_ENABLED=true
                 </code>{" "}
-                when ready. The engine runs steps
-                2–4 on schedule — no daily clicks
-                required.
+                when ready for live paper orders.
+                All four steps run on schedule — no
+                daily clicks required.
               </p>
               <div
                 className="button-row"
@@ -523,6 +524,11 @@ export function AutomationPanel() {
                 Automation:{" "}
                 {status.enabled ? "on" : "off"}
                 {" · "}
+                Next backfill:{" "}
+                {formatTimestamp(
+                  status.nextRuns.backfill
+                )}
+                {" · "}
                 Next signal:{" "}
                 {formatTimestamp(
                   status.nextRuns.signal
@@ -549,7 +555,7 @@ export function AutomationPanel() {
                 <WorkflowStep
                   step={1}
                   title="Update Market Data"
-                  when="After the close, when SQLite is behind (yellow banner), or for first-time setup."
+                  when="Automatically at 4:00 PM ET when automation is on, or manually when SQLite is behind (yellow banner)."
                   does="Downloads missing daily bars for all 30 ETFs from Alpaca (data API only — no orders). Takes about 1–2 minutes."
                   action="run-backfill"
                   buttonLabel="Update Market Data"
@@ -566,7 +572,7 @@ export function AutomationPanel() {
                 <WorkflowStep
                   step={2}
                   title="Run Signal Now"
-                  when="After step 1 when data is current, or after the 4:05 PM ET scheduled signal if you want to refresh manually."
+                  when="Automatically at 4:05 PM ET when automation is on, or manually when you want to refresh the signal."
                   does="Reads SQLite, computes aggressive momentum, and updates data/signal-state.json. No Alpaca trading calls."
                   action="run-signal"
                   buttonLabel="Run Signal Now"

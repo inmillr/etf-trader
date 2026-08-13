@@ -1,6 +1,11 @@
 import type { AutomationSchedule } from "./AutomationTypes.js";
 import { formatEtDay } from "./AutomationStore.js";
 
+export type ScheduledAutomationJob =
+  | "backfill"
+  | "signal"
+  | "trade";
+
 function parseTimeEt(
   timeEt: string
 ): { hour: number; minute: number } {
@@ -24,6 +29,20 @@ function parseTimeEt(
   }
 
   return { hour, minute };
+}
+
+function getScheduleTimeEt(
+  schedule: AutomationSchedule,
+  job: ScheduledAutomationJob
+): string {
+  switch (job) {
+    case "backfill":
+      return schedule.backfillTimeEt;
+    case "signal":
+      return schedule.signalTimeEt;
+    case "trade":
+      return schedule.tradeTimeEt;
+  }
 }
 
 function getEtParts(date: Date): {
@@ -121,16 +140,12 @@ function buildEtDate(
 
 export function nextScheduledRun(
   schedule: AutomationSchedule,
-  job: "signal" | "trade",
+  job: ScheduledAutomationJob,
   from = new Date()
 ): Date | null {
-  const timeEt =
-    job === "signal"
-      ? schedule.signalTimeEt
-      : schedule.tradeTimeEt;
-
-  const { hour, minute } =
-    parseTimeEt(timeEt);
+  const { hour, minute } = parseTimeEt(
+    getScheduleTimeEt(schedule, job)
+  );
 
   for (let offset = 0; offset < 8; offset += 1) {
     const candidate = new Date(from);
@@ -158,7 +173,7 @@ export function nextScheduledRun(
 
 export function isJobDue(
   schedule: AutomationSchedule,
-  job: "signal" | "trade",
+  job: ScheduledAutomationJob,
   lastRunDay: string | null,
   now = new Date()
 ): boolean {
@@ -166,13 +181,9 @@ export function isJobDue(
     return false;
   }
 
-  const timeEt =
-    job === "signal"
-      ? schedule.signalTimeEt
-      : schedule.tradeTimeEt;
-
-  const { hour, minute } =
-    parseTimeEt(timeEt);
+  const { hour, minute } = parseTimeEt(
+    getScheduleTimeEt(schedule, job)
+  );
 
   const et = getEtParts(now);
   const nowMinutes = et.hour * 60 + et.minute;

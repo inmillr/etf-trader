@@ -16,6 +16,7 @@ import type {
 const DEFAULT_STATE: AutomationState = {
   enabled: false,
   schedule: {
+    backfillTimeEt: "16:00",
     signalTimeEt: "16:05",
     tradeTimeEt: "09:35",
     timezone: "America/New_York"
