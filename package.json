@@ -1,0 +1,26 @@
+{
+  "name": "etf-trader",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "backfill": "node --env-file=.env --import=tsx src/scripts/backfillHistoricalData.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.11",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@alpacahq/alpaca-trade-api": "^4.0.1",
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^17.4.2"
+  }
+}
