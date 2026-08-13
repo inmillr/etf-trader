@@ -1,6 +1,5 @@
 ETF Trader — Commands Reference
 ================================
-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
 
 ONE-TIME SETUP
 --------------
