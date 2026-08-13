@@ -11,6 +11,8 @@
     "backfill:once:5m": "node --import=tsx src/scripts/backfillOnce.ts 5m 2025-01-01 2026-08-13",
     "aggregate:daily": "node --import=tsx src/scripts/aggregateLocalDaily.ts",
     "scan": "node --import=tsx src/scripts/scanUniverse.ts",
+    "signal": "node --import=tsx src/scripts/dailySignal.ts",
+    "journal": "node --import=tsx src/scripts/dailyJournal.ts",
     "backtest:adaptive": "node --import=tsx src/scripts/runAdaptiveBacktest.ts",
     "backtest:intraday": "node --import=tsx src/scripts/runAdaptiveIntradayBacktest.ts",
     "backtest:hybrid": "node --import=tsx src/scripts/runHybridBacktest.ts",
