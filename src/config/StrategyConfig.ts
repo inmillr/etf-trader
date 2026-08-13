@@ -32,3 +32,13 @@ export const HYBRID_WARMUP_DAYS =
   HYBRID_SELECTION_LOOKBACK_DAYS +
   HYBRID_TREND_GATE.slowPeriod +
   5;
+
+export const AGGRESSIVE_LOOKBACK_DAYS = 10;
+
+export const AGGRESSIVE_ROTATION_POLICY = {
+  minHoldDays: 0,
+  minScoreImprovement: 0
+};
+
+export const AGGRESSIVE_WARMUP_DAYS =
+  AGGRESSIVE_LOOKBACK_DAYS + 35;

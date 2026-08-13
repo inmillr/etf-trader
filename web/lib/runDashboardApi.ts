@@ -13,7 +13,12 @@ const projectRoot =
 export async function runDashboardApi<
   T
 >(
-  command: "signal" | "backtest" | "journal",
+  command:
+    | "signal"
+    | "backtest"
+    | "journal"
+    | "automation-status"
+    | "automation-control",
   flags: Record<string, string | number> = {}
 ): Promise<T> {
   const args = [

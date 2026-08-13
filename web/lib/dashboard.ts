@@ -1,5 +1,7 @@
 import { runDashboardApi } from "@/lib/runDashboardApi";
 import type {
+  AutomationControlResponse,
+  AutomationStatusResponse,
   DashboardBacktestResponse,
   DashboardJournalResponse,
   DashboardSignalResponse
@@ -30,5 +32,20 @@ export async function getDashboardJournal(
   return runDashboardApi<DashboardJournalResponse>(
     "journal",
     { start, end, lookback }
+  );
+}
+
+export async function getAutomationStatus(): Promise<AutomationStatusResponse> {
+  return runDashboardApi<AutomationStatusResponse>(
+    "automation-status"
+  );
+}
+
+export async function controlAutomation(
+  action: string
+): Promise<AutomationControlResponse> {
+  return runDashboardApi<AutomationControlResponse>(
+    "automation-control",
+    { action }
   );
 }

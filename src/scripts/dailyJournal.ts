@@ -23,7 +23,7 @@ const journal = await service.getJournal(
 );
 
 console.log(
-  "=== Daily Journal (Hybrid) ==="
+  "=== Daily Journal (Aggressive) ==="
 );
 console.log(
   `Period:     ${journal.start} → ${journal.end}`

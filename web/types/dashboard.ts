@@ -1,5 +1,5 @@
 export interface DashboardSignalResponse {
-  strategy: "hybrid";
+  strategy: "aggressive";
   signalDate: string;
   selectionAsOfDate: string;
   action: string;
@@ -7,15 +7,13 @@ export interface DashboardSignalResponse {
   heldSymbol: string | null;
   rawPick: string | null;
   isRebalanceDay: boolean;
-  trendBullish: boolean;
-  bearishCrossover: boolean;
-  intradaySetup: boolean;
-  inEntryWindow: boolean;
-  trendFast: number | null;
-  trendSlow: number | null;
+  absoluteMomentumPassed: boolean;
+  usingFallback: boolean;
+  fallbackSymbol: string | null;
+  rotationBlocked: boolean;
   rankings: Array<{
     symbol: string;
-    score: number;
+    trailingReturn: number;
   }>;
   reason: string;
   heldSinceDay?: string | null;
@@ -35,7 +33,7 @@ export interface DashboardTrade {
 }
 
 export interface DashboardBacktestResponse {
-  strategy: "hybrid";
+  strategy: "aggressive";
   start: string;
   end: string;
   lookbackDays: number;
@@ -45,10 +43,6 @@ export interface DashboardBacktestResponse {
   maxDrawdown: number;
   trades: number;
   exposurePercent: number;
-  stopExits: number;
-  targetExits: number;
-  trendExits: number;
-  rotationExits: number;
   spyReturn: number;
   metrics: Record<string, number>;
   equityCurve: Array<{
@@ -80,4 +74,61 @@ export interface DashboardJournalResponse {
     maxDrawdown: number;
     trades: number;
   };
+}
+
+export interface AutomationJobRun {
+  at: string;
+  day: string;
+  success: boolean;
+  message: string;
+  mode?: "dry-run" | "execute" | "offline";
+}
+
+export interface AutomationRunLogEntry {
+  id: string;
+  at: string;
+  job: string;
+  trigger: string;
+  success: boolean;
+  message: string;
+}
+
+export interface AutomationStatusResponse {
+  enabled: boolean;
+  daemonRunning: boolean;
+  daemon: {
+    pid: number | null;
+    startedAt: string | null;
+    lastHeartbeat: string | null;
+  };
+  schedule: {
+    signalTimeEt: string;
+    tradeTimeEt: string;
+    timezone: string;
+  };
+  nextRuns: {
+    signal: string | null;
+    trade: string | null;
+  };
+  lastRuns: {
+    signal: AutomationJobRun | null;
+    trade: AutomationJobRun | null;
+  };
+  runLog: AutomationRunLogEntry[];
+  env: {
+    paperTradingEnabled: boolean;
+    alpacaPaper: boolean;
+    allowLiveTrading: boolean;
+  };
+  market: {
+    isOpen: boolean | null;
+    nextOpen: string | null;
+    nextClose: string | null;
+  } | null;
+}
+
+export interface AutomationControlResponse
+  extends AutomationStatusResponse {
+  accepted?: boolean;
+  message?: string;
 }

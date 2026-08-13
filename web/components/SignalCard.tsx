@@ -25,11 +25,10 @@ export function SignalCard({
 }) {
   return (
     <section className="panel">
-      <h2>Today&apos;s Signal · Hybrid</h2>
+      <h2>Today&apos;s Signal · Aggressive</h2>
       <p className="muted">
-        Data through {signal.signalDate} ·
-        selection as of{" "}
-        {signal.selectionAsOfDate}
+        Daily 10d momentum · 30 ETFs · SPY
+        fallback · data through {signal.signalDate}
       </p>
 
       <div
@@ -64,41 +63,18 @@ export function SignalCard({
           marginTop: 16
         }}
       >
-        <dt className="muted">Universe pick</dt>
+        <dt className="muted">Model pick</dt>
         <dd>{signal.rawPick ?? "(none)"}</dd>
-        <dt className="muted">Daily trend</dt>
+        <dt className="muted">Rebalance</dt>
+        <dd>Daily (today counts)</dd>
+        <dt className="muted">Absolute momentum</dt>
         <dd>
-          {signal.trendBullish
-            ? "Bullish"
-            : "Not bullish"}
-          {signal.bearishCrossover
-            ? " · bearish cross"
-            : ""}
+          {signal.usingFallback
+            ? "Fail (SPY fallback)"
+            : signal.absoluteMomentumPassed
+              ? "Pass"
+              : "Fail"}
         </dd>
-        <dt className="muted">5m setup</dt>
-        <dd>
-          {signal.intradaySetup
-            ? "Ready"
-            : signal.inEntryWindow
-              ? "Watching"
-              : "Outside window"}
-        </dd>
-        <dt className="muted">Rebalance day</dt>
-        <dd>
-          {signal.isRebalanceDay
-            ? "Yes (Monday)"
-            : "No"}
-        </dd>
-        {signal.trendFast !== null ? (
-          <>
-            <dt className="muted">MA 20/50</dt>
-            <dd>
-              {signal.trendFast.toFixed(2)} /{" "}
-              {signal.trendSlow?.toFixed(2) ??
-                "—"}
-            </dd>
-          </>
-        ) : null}
         {signal.heldSymbol ? (
           <>
             <dt className="muted">Current hold</dt>
@@ -116,21 +92,23 @@ export function SignalCard({
         className="rankings"
         style={{ marginTop: 20 }}
       >
-        <h3>Rankings (30d score · liquid ETFs)</h3>
-        {signal.rankings.slice(0, 8).map(
+        <h3>Rankings (10d return)</h3>
+        {signal.rankings.slice(0, 10).map(
           (entry, index) => {
-            const maxScore = Math.max(
+            const maxReturn = Math.max(
               ...signal.rankings
-                .slice(0, 8)
+                .slice(0, 10)
                 .map((item) =>
-                  Math.abs(item.score)
+                  Math.abs(
+                    item.trailingReturn
+                  )
                 ),
               1
             );
 
             const width =
-              (Math.abs(entry.score) /
-                maxScore) *
+              (Math.abs(entry.trailingReturn) /
+                maxReturn) *
               100;
 
             return (
@@ -149,8 +127,14 @@ export function SignalCard({
                     />
                   </div>
                 </div>
-                <span>
-                  {entry.score.toFixed(2)}
+                <span
+                  className={
+                    entry.trailingReturn >= 0
+                      ? "positive"
+                      : "negative"
+                  }
+                >
+                  {entry.trailingReturn.toFixed(2)}%
                 </span>
               </div>
             );

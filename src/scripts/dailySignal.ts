@@ -97,13 +97,16 @@ if (saveState) {
       symbol: signal.targetSymbol!,
       since: signal.signalDate
     });
-  } else if (signal.action === "exit") {
+  } else if (
+    signal.action === "exit" ||
+    signal.action === "stay_cash"
+  ) {
     saveStateFile(statePath, null);
   }
 }
 
 console.log(
-  "=== Daily Signal (Hybrid) ==="
+  "=== Daily Signal (Aggressive) ==="
 );
 console.log(
   `Data through:          ${signal.signalDate}`
@@ -112,10 +115,10 @@ console.log(
   `Selection as of:       ${signal.selectionAsOfDate}`
 );
 console.log(
-  "Universe:              SPY, QQQ, IWM, DIA (liquid + 5m)"
+  "Universe:              30 ETFs · daily rebalance · 10d momentum"
 );
 console.log(
-  `Rebalance day:         ${signal.isRebalanceDay ? "yes (Monday)" : "no"}`
+  `Rebalance day:         yes (daily)`
 );
 console.log("");
 
@@ -134,15 +137,12 @@ if (savedState?.symbol || signal.heldSymbol) {
 
 if (signal.rawPick) {
   console.log(
-    `Universe pick:         ${signal.rawPick}`
+    `Model pick:            ${signal.rawPick}`
   );
 }
 
 console.log(
-  `Daily trend:           ${signal.trendBullish ? "bullish" : "not bullish"}`
-);
-console.log(
-  `5m setup:              ${signal.intradaySetup ? "ready" : signal.inEntryWindow ? "watching" : "outside window"}`
+  `Absolute momentum:     ${signal.usingFallback ? "fail (SPY fallback)" : signal.absoluteMomentumPassed ? "pass" : "fail"}`
 );
 console.log("");
 console.log(
@@ -151,12 +151,12 @@ console.log(
 console.log("");
 
 console.log(
-  "=== Rankings (30d score) ==="
+  "=== Rankings (10d trailing return %) ==="
 );
 
 for (const entry of signal.rankings.slice(0, 10)) {
   console.log(
-    `  ${entry.symbol.padEnd(5)}  ${entry.score.toFixed(2)}`
+    `  ${entry.symbol.padEnd(5)}  ${entry.trailingReturn.toFixed(2)}%`
   );
 }
 

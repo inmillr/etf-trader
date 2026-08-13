@@ -2,6 +2,7 @@ import {
   getDashboardBacktest,
   getDashboardSignal
 } from "@/lib/dashboard";
+import { AutomationPanel } from "@/components/AutomationPanel";
 import { EquityChart } from "@/components/EquityChart";
 import { SignalCard } from "@/components/SignalCard";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -32,6 +33,8 @@ export default async function DashboardPage() {
       <main>
         <SiteHeader active="dashboard" />
 
+        <AutomationPanel />
+
         <SignalCard signal={signal} />
 
         <section
@@ -39,7 +42,7 @@ export default async function DashboardPage() {
           style={{ marginTop: 16 }}
         >
           <h2>
-            Hybrid Backtest · {backtest.start} →{" "}
+            Aggressive Backtest · {backtest.start} →{" "}
             {backtest.end}
           </h2>
           <div
@@ -69,15 +72,31 @@ export default async function DashboardPage() {
               </p>
             </div>
             <div>
-              <p className="muted">Trades</p>
+              <p className="muted">Avg weekly</p>
               <p className="metric-value">
-                {backtest.trades}
+                {backtest.metrics.averageWeeklyReturn?.toFixed(2) ??
+                  "0.00"}
+                %
               </p>
             </div>
             <div>
-              <p className="muted">Max drawdown</p>
-              <p className="metric-value negative">
-                {backtest.maxDrawdown.toFixed(2)}%
+              <p className="muted">Avg daily</p>
+              <p className="metric-value">
+                {backtest.metrics.averageDailyReturn?.toFixed(3) ??
+                  "0.000"}
+                %
+              </p>
+            </div>
+            <div>
+              <p className="muted">Exposure</p>
+              <p className="metric-value">
+                {backtest.exposurePercent.toFixed(1)}%
+              </p>
+            </div>
+            <div>
+              <p className="muted">Trades</p>
+              <p className="metric-value">
+                {backtest.trades}
               </p>
             </div>
           </div>
@@ -86,27 +105,15 @@ export default async function DashboardPage() {
             style={{ marginTop: 12 }}
           >
             <div>
-              <p className="muted">Exposure</p>
-              <p className="metric-value">
-                {backtest.exposurePercent.toFixed(1)}%
+              <p className="muted">Max drawdown</p>
+              <p className="metric-value negative">
+                {backtest.maxDrawdown.toFixed(2)}%
               </p>
             </div>
             <div>
-              <p className="muted">Stop exits</p>
+              <p className="muted">Final equity</p>
               <p className="metric-value">
-                {backtest.stopExits}
-              </p>
-            </div>
-            <div>
-              <p className="muted">Target exits</p>
-              <p className="metric-value">
-                {backtest.targetExits}
-              </p>
-            </div>
-            <div>
-              <p className="muted">Trend exits</p>
-              <p className="metric-value">
-                {backtest.trendExits}
+                ${backtest.finalEquity.toFixed(2)}
               </p>
             </div>
           </div>
@@ -158,9 +165,9 @@ export default async function DashboardPage() {
         >
           <h2>Trade Log</h2>
           <p className="muted">
-            Weekly universe rotation plus 5m
-            entries, ATR stops/targets, and daily
-            trend exits.
+            Daily rebalance into top 10-day
+            momentum; rotates among 30 ETFs with
+            SPY fallback when momentum fails.
           </p>
           <TradeLogTable
             trades={backtest.tradeLog}
