@@ -24,6 +24,13 @@ const topCount = Number(
 const useAlpacaValidation =
   process.argv.includes("--live-universe");
 
+if (useAlpacaValidation) {
+  console.warn(
+    "Warning: --live-universe calls the Alpaca trading API " +
+    "to verify symbols. Omit this flag to scan using local data only."
+  );
+}
+
 const repository =
   new SQLiteCandleRepository(
     databasePath
@@ -64,8 +71,9 @@ try {
   if (results.length === 0) {
     console.log(
       "No ETFs passed the universe filter. " +
-      "Backfill daily candles first, e.g.:\n" +
-      "  npm run backfill -- SPY,QQQ,XLK 1d 2025-01-01 2026-08-13"
+      "Load daily candles first:\n" +
+      "  npm run backfill:once        # one-time Alpaca download\n" +
+      "  npm run aggregate:daily      # or build daily from local 5m data"
     );
   } else {
     console.log(

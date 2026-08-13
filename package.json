@@ -5,9 +5,16 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
-    "backfill": "node --env-file=.env --import=tsx src/scripts/backfillHistoricalData.ts",
-    "backfill:universe": "node --env-file=.env --import=tsx src/scripts/backfillUniverse.ts",
-    "scan": "node --env-file=.env --import=tsx src/scripts/scanUniverse.ts"
+    "backfill": "node --import=tsx src/scripts/backfillHistoricalData.ts",
+    "backfill:universe": "node --import=tsx src/scripts/backfillUniverse.ts",
+    "backfill:once": "node --import=tsx src/scripts/backfillOnce.ts",
+    "backfill:once:5m": "node --import=tsx src/scripts/backfillOnce.ts 5m 2025-01-01 2026-08-13",
+    "aggregate:daily": "node --import=tsx src/scripts/aggregateLocalDaily.ts",
+    "scan": "node --import=tsx src/scripts/scanUniverse.ts",
+    "backtest:adaptive": "node --import=tsx src/scripts/runAdaptiveBacktest.ts",
+    "backtest:intraday": "node --import=tsx src/scripts/runAdaptiveIntradayBacktest.ts",
+    "backtest:hybrid": "node --import=tsx src/scripts/runHybridBacktest.ts",
+    "backtest:dual-momentum": "node --import=tsx src/scripts/runAdaptiveBacktest.ts --compare"
   },
   "keywords": [],
   "author": "",

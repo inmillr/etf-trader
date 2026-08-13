@@ -1,10 +1,12 @@
 import type { Candle } from "../types/market.js";
+import { calculateATR } from "../indicators/ATR.js";
 
 export interface UniverseFilterOptions {
   minAvgDailyVolume: number;
   minAvgDailyDollarVolume: number;
   minPrice: number;
   minHistoryDays: number;
+  maxAtrPercent?: number;
 }
 
 export const DEFAULT_UNIVERSE_FILTER: UniverseFilterOptions = {
@@ -111,6 +113,26 @@ export function applyUniverseFilter(
       `below minimum ` +
       `$${options.minAvgDailyDollarVolume.toLocaleString()}.`
     );
+  }
+
+  if (options.maxAtrPercent !== undefined) {
+    const atrValues = calculateATR(
+      sorted,
+      14
+    );
+
+    if (atrValues.length > 0 && latestPrice > 0) {
+      const atrPercent =
+        (atrValues[atrValues.length - 1]! /
+          latestPrice) * 100;
+
+      if (atrPercent > options.maxAtrPercent) {
+        reasons.push(
+          `ATR ${atrPercent.toFixed(2)}% exceeds maximum ` +
+          `${options.maxAtrPercent.toFixed(2)}%.`
+        );
+      }
+    }
   }
 
   return {

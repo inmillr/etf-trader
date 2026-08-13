@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { AlpacaMarketDataProvider } from "../data/providers/AlpacaMarketDataProvider.js";
 import { MarketDataService } from "../data/MarketDataService.js";
 import { HistoricalDataService } from "../data/HistoricalDataService.js";

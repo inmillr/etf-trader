@@ -39,6 +39,29 @@ export const DEFAULT_ETF_UNIVERSE: EtfCandidate[] = [
   { symbol: "USO", name: "United States Oil", category: "commodity" }
 ];
 
+export const LIQUID_ETF_UNIVERSE: EtfCandidate[] =
+  DEFAULT_ETF_UNIVERSE.filter(
+    (candidate) =>
+      candidate.category === "broad"
+  );
+
+export const LIQUID_ETF_SYMBOLS: readonly string[] =
+  LIQUID_ETF_UNIVERSE.map(
+    (candidate) => candidate.symbol
+  );
+
+export function filterLiquidCandidates(
+  candidates: EtfCandidate[]
+): EtfCandidate[] {
+  const liquidSymbols = new Set(
+    LIQUID_ETF_SYMBOLS
+  );
+
+  return candidates.filter((candidate) =>
+    liquidSymbols.has(candidate.symbol)
+  );
+}
+
 export interface UniverseProvider {
   getCandidates(): Promise<EtfCandidate[]>;
 }

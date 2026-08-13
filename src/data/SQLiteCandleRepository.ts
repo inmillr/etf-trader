@@ -179,7 +179,7 @@ export class SQLiteCandleRepository
   };
 }
 
-async getTimestamps(
+  async getTimestamps(
   query: CandleQuery
 ): Promise<Date[]> {
   const rows = this.db.prepare(`
@@ -203,4 +203,21 @@ async getTimestamps(
     (row) => new Date(row.timestamp)
   );
 }
+
+  listSymbols(
+    timeframe: Timeframe
+  ): string[] {
+    const rows = this.db.prepare(`
+      SELECT DISTINCT symbol
+      FROM candles
+      WHERE timeframe = ?
+      ORDER BY symbol ASC
+    `).all(timeframe) as Array<{
+      symbol: string;
+    }>;
+
+    return rows.map(
+      (row) => row.symbol
+    );
+  }
 }

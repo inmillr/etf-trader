@@ -13,13 +13,22 @@ export interface ScoringWeights {
   drawdownPenalty: number;
 }
 
-export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {
+export const CONSERVATIVE_SCORING_WEIGHTS: ScoringWeights = {
   relativeMomentum5d: 0.25,
   relativeMomentum20d: 0.15,
   trendStrength: 0.20,
   relativeVolume: 0.15,
   volatilityFit: 0.05,
   drawdownPenalty: 0.20
+};
+
+export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {
+  relativeMomentum5d: 0.35,
+  relativeMomentum20d: 0.10,
+  trendStrength: 0.25,
+  relativeVolume: 0.20,
+  volatilityFit: 0.05,
+  drawdownPenalty: 0.05
 };
 
 export interface VolatilityFitOptions {

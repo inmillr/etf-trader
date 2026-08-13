@@ -24,7 +24,7 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
     url.searchParams.set("feed", "iex");
     url.searchParams.set("sort", "asc");
 
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       headers: {
         "APCA-API-KEY-ID": this.config.apiKey,
         "APCA-API-SECRET-KEY": this.config.apiSecret
@@ -85,4 +85,40 @@ export class AlpacaMarketDataProvider implements MarketDataProvider {
         return "1Day";
     }
   }
+}
+
+async function fetchWithRetry(
+  url: URL,
+  init: RequestInit,
+  maxAttempts = 5
+): Promise<Response> {
+  let delayMs = 1000;
+
+  for (
+    let attempt = 1;
+    attempt <= maxAttempts;
+    attempt++
+  ) {
+    const response = await fetch(url, init);
+
+    if (
+      response.status !== 429 ||
+      attempt === maxAttempts
+    ) {
+      return response;
+    }
+
+    await sleep(delayMs);
+    delayMs *= 2;
+  }
+
+  throw new Error(
+    "Alpaca market data request exhausted retries."
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
