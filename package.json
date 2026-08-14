@@ -14,7 +14,7 @@
     "signal": "node --import=tsx src/scripts/dailySignal.ts",
     "paper:status": "node --import=tsx src/scripts/paperStatus.ts",
     "paper:trade": "node --import=tsx src/scripts/paperTrade.ts",
-    "automate": "node --import=tsx src/scripts/runAutomation.ts",
+    "automate": "INHIBIT_WHY=\"ETF trader automation\" ./scripts/with-inhibit.sh node --import=tsx src/scripts/runAutomation.ts",
     "automate:tick": "node --import=tsx src/scripts/automationTick.ts",
     "journal": "node --import=tsx src/scripts/dailyJournal.ts",
     "backtest": "node --import=tsx src/scripts/runAggressiveBacktest.ts",
