@@ -1,5 +1,21 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import {
+  IBM_Plex_Mono,
+  IBM_Plex_Sans
+} from "next/font/google";
+
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans"
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-mono"
+});
 
 export const metadata: Metadata = {
   title: "ETF Trader Dashboard",
@@ -14,7 +30,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body
+        className={`${plexSans.variable} ${plexMono.variable} ${plexSans.className}`}
+      >
+        {children}
+      </body>
     </html>
   );
 }

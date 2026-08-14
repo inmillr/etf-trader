@@ -98,18 +98,10 @@ export function JournalView({
           </label>
           <button
             type="button"
+            className="btn btn-primary"
             onClick={loadJournal}
             disabled={loading}
-            style={{
-              alignSelf: "flex-end",
-              background: "#4da3ff",
-              border: "none",
-              borderRadius: 8,
-              color: "#0b0f14",
-              cursor: "pointer",
-              fontWeight: 600,
-              padding: "10px 16px"
-            }}
+            style={{ alignSelf: "flex-end" }}
           >
             {loading ? "Loading…" : "Load"}
           </button>

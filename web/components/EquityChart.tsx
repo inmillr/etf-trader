@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CartesianGrid,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -44,13 +45,22 @@ export function EquityChart({
     <div style={{ width: "100%", height: 320 }}>
       <ResponsiveContainer>
         <LineChart data={sampled}>
+          <CartesianGrid
+            stroke="#3c3836"
+            strokeDasharray="3 3"
+            vertical={false}
+          />
           <XAxis
             dataKey="date"
-            tick={{ fill: "#8b9bb4", fontSize: 11 }}
+            tick={{ fill: "#928374", fontSize: 11, fontFamily: "IBM Plex Mono, ui-monospace, monospace" }}
             minTickGap={28}
+            axisLine={{ stroke: "#504945" }}
+            tickLine={{ stroke: "#504945" }}
           />
           <YAxis
-            tick={{ fill: "#8b9bb4", fontSize: 11 }}
+            tick={{ fill: "#928374", fontSize: 11, fontFamily: "IBM Plex Mono, ui-monospace, monospace" }}
+            axisLine={{ stroke: "#504945" }}
+            tickLine={{ stroke: "#504945" }}
             domain={["auto", "auto"]}
             tickFormatter={(value) =>
               `$${Number(value).toFixed(0)}`
@@ -58,9 +68,13 @@ export function EquityChart({
           />
           <Tooltip
             contentStyle={{
-              background: "#121821",
-              border: "1px solid #243044",
-              borderRadius: 8
+              background: "#282828",
+              border: "1px solid #504945",
+              borderRadius: 4,
+              color: "#ebdbb2",
+              fontFamily:
+                "IBM Plex Mono, ui-monospace, monospace",
+              fontSize: 12
             }}
             formatter={(value) => [
               `$${Number(value).toFixed(2)}`,
@@ -70,7 +84,7 @@ export function EquityChart({
           <Line
             type="monotone"
             dataKey="equity"
-            stroke="#4da3ff"
+            stroke="#8ec07c"
             strokeWidth={2}
             dot={false}
           />

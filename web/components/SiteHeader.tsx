@@ -13,7 +13,7 @@ export function SiteHeader({
           className="muted"
           style={{ margin: "4px 0 0" }}
         >
-          Liquid dual momentum · local SQLite
+          dual momentum · paper · local sqlite
         </p>
       </div>
       <nav>
