@@ -1,25 +1,25 @@
 {
   "enabled": true,
   "schedule": {
-    "backfillTimeEt": "16:00",
-    "signalTimeEt": "16:05",
-    "tradeTimeEt": "09:35",
+    "backfillTimeEt": "15:50",
+    "signalTimeEt": "15:55",
+    "tradeTimeEt": "15:55",
     "timezone": "America/New_York"
   },
   "daemon": {
-    "pid": 22654,
-    "startedAt": "2026-08-13T23:53:38.937Z",
-    "lastHeartbeat": "2026-08-14T00:08:39.422Z"
+    "pid": 47828,
+    "startedAt": "2026-08-14T01:21:10.088Z",
+    "lastHeartbeat": "2026-08-14T01:38:10.806Z"
   },
   "lastRuns": {
     "backfill": {
-      "at": "2026-08-13T23:47:34.593Z",
+      "at": "2026-08-14T00:12:53.867Z",
       "day": "2026-08-13",
       "success": true,
       "message": "Downloaded 172 new daily bar(s) for 30/30 ETFs"
     },
     "signal": {
-      "at": "2026-08-13T23:50:17.467Z",
+      "at": "2026-08-14T00:13:24.469Z",
       "day": "2026-08-13",
       "success": true,
       "message": "HOLD — Keep holding SMH.",
@@ -34,6 +34,22 @@
     }
   },
   "runLog": [
+    {
+      "id": "1786666404471-signal",
+      "at": "2026-08-14T00:13:24.471Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "HOLD — Keep holding SMH."
+    },
+    {
+      "id": "1786666373881-backfill",
+      "at": "2026-08-14T00:12:53.881Z",
+      "job": "backfill",
+      "trigger": "manual",
+      "success": true,
+      "message": "Downloaded 172 new daily bar(s) for 30/30 ETFs"
+    },
     {
       "id": "1786665025837-trade-dry",
       "at": "2026-08-13T23:50:25.837Z",
@@ -148,26 +164,21 @@
     }
   ],
   "lastActionLog": {
-    "at": "2026-08-13T23:50:25.837Z",
-    "job": "trade-dry",
+    "at": "2026-08-14T00:13:24.471Z",
+    "job": "signal",
     "success": true,
     "log": [
-      "▶ Preview Trade",
-      "Signal (2026-08-13): HOLD",
+      "▶ Run Signal Now",
+      "Previous hold: SMH since 2026-08-13",
+      "Loaded SQLite daily bars through 2026-08-13",
+      "Evaluated aggressive dual momentum (30 ETFs · 10-day lookback · daily rebalance)",
+      "Action: HOLD",
+      "Target: SMH",
+      "Tracked hold: SMH",
       "Reason: Keep holding SMH.",
-      "Connected to Alpaca paper account (read-only for planning)",
-      "",
-      "Signal action: HOLD",
-      "Reason:        Keep holding SMH.",
-      "Broker:        flat (0 shares)",
-      "Target:        SMH",
-      "Trade:         SKIP — Signal is HOLD — no order required.",
-      "",
-      "Reference price (SMH): $589.06",
-      "",
-      "No orders needed — Signal is HOLD — no order required.",
-      "",
-      "✓ Signal is HOLD — no order required."
+      "Left data/signal-state.json unchanged",
+      "No Alpaca orders submitted (signal computation only)",
+      "✓ Done"
     ]
   }
 }
