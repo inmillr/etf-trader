@@ -7,9 +7,9 @@
     "timezone": "America/New_York"
   },
   "daemon": {
-    "pid": 47142,
-    "startedAt": "2026-08-14T19:34:04.808Z",
-    "lastHeartbeat": "2026-08-14T20:31:08.236Z"
+    "pid": null,
+    "startedAt": null,
+    "lastHeartbeat": null
   },
   "lastRuns": {
     "backfill": {
