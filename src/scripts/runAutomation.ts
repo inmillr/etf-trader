@@ -69,7 +69,7 @@ console.log(
   `Poll interval: ${POLL_MS / 1000}s`
 );
 console.log(
-  "Schedule (ET): backfill 16:00 · signal 16:05 · trade 09:35"
+  "Schedule (ET): backfill 15:50 · signal 15:55 · trade 15:55"
 );
 console.log(
   "Control:       enable in UI or set enabled in data/automation-state.json"

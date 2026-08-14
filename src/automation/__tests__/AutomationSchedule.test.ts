@@ -6,9 +6,9 @@ import {
 } from "../AutomationSchedule.js";
 
 const SCHEDULE = {
-  backfillTimeEt: "16:00",
-  signalTimeEt: "16:05",
-  tradeTimeEt: "09:35",
+  backfillTimeEt: "15:50",
+  signalTimeEt: "15:55",
+  tradeTimeEt: "15:55",
   timezone: "America/New_York"
 };
 
@@ -89,7 +89,7 @@ describe("AutomationSchedule", () => {
 
   test("isJobDue runs backfill at its scheduled time", () => {
     const thursdayBeforeSignal = new Date(
-      "2026-08-13T20:02:00.000Z"
+      "2026-08-13T19:52:00.000Z"
     );
 
     expect(
@@ -109,5 +109,63 @@ describe("AutomationSchedule", () => {
         thursdayBeforeSignal
       )
     ).toBe(false);
+  });
+
+  test("signal and trade are due together before the close", () => {
+    const thursdayBeforeClose = new Date(
+      "2026-08-13T19:56:00.000Z"
+    );
+
+    expect(
+      isJobDue(
+        SCHEDULE,
+        "signal",
+        null,
+        thursdayBeforeClose
+      )
+    ).toBe(true);
+
+    expect(
+      isJobDue(
+        SCHEDULE,
+        "trade",
+        null,
+        thursdayBeforeClose
+      )
+    ).toBe(true);
+  });
+
+  test("next trade is the same afternoon, not the next morning", () => {
+    const thursdayMorning = new Date(
+      "2026-08-13T14:00:00.000Z"
+    );
+
+    const trade = nextScheduledRun(
+      SCHEDULE,
+      "trade",
+      thursdayMorning
+    );
+    const signal = nextScheduledRun(
+      SCHEDULE,
+      "signal",
+      thursdayMorning
+    );
+
+    expect(trade).not.toBeNull();
+    expect(signal).not.toBeNull();
+    expect(trade!.getTime()).toBe(
+      signal!.getTime()
+    );
+
+    const etHour = new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone: "America/New_York",
+        hour: "2-digit",
+        hour12: false
+      }
+    ).format(trade!);
+
+    expect(Number(etHour)).toBe(15);
   });
 });

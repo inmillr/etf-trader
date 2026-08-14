@@ -9,6 +9,13 @@ export type AutomationTrigger =
   | "manual"
   | "startup";
 
+export const DEFAULT_AUTOMATION_SCHEDULE: AutomationSchedule = {
+  backfillTimeEt: "15:50",
+  signalTimeEt: "15:55",
+  tradeTimeEt: "15:55",
+  timezone: "America/New_York"
+};
+
 export interface AutomationSchedule {
   backfillTimeEt: string;
   signalTimeEt: string;
@@ -58,6 +65,22 @@ export interface AutomationState {
   } | null;
 }
 
+export interface FillJournalEntry {
+  id: string;
+  at: string;
+  day: string;
+  trigger: AutomationTrigger;
+  mode: "dry-run" | "execute" | "offline";
+  signalAction: string;
+  side: "buy" | "sell";
+  symbol: string;
+  qty: number;
+  backtestPrice: number | null;
+  alpacaFillPrice: number | null;
+  nextClose: number | null;
+  nextCloseDate: string | null;
+}
+
 export interface AutomationStatusResponse {
   enabled: boolean;
   daemonRunning: boolean;
@@ -71,6 +94,7 @@ export interface AutomationStatusResponse {
   lastRuns: AutomationState["lastRuns"];
   runLog: AutomationRunLogEntry[];
   lastActionLog: AutomationState["lastActionLog"];
+  fillJournal: FillJournalEntry[];
   env: {
     paperTradingEnabled: boolean;
     alpacaPaper: boolean;

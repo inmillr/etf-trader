@@ -26,6 +26,11 @@ import type {
   StrategyOrder
 } from "./Strategy.js";
 
+export type ExecutionTiming =
+  | "next-open"
+  | "same-close"
+  | "prior-close";
+
 export interface MultiSymbolBacktestOptions {
   start: Date;
   end: Date;
@@ -34,6 +39,12 @@ export interface MultiSymbolBacktestOptions {
   warmupDays?: number;
   rebalanceFrequency?: RebalanceFrequency;
   enterOnSelection?: boolean;
+  /**
+   * next-open: rank prior close, fill next open (old 9:35 AM).
+   * prior-close: rank prior close, fill that day's close (overnight only).
+   * same-close: rank and fill the same close (new 3:55 PM).
+   */
+  executionTiming?: ExecutionTiming;
   rotation?: RotationPolicyOptions;
   portfolio?: PortfolioSimulatorOptions;
   selector?: PointInTimeSelectorOptions;
@@ -117,6 +128,15 @@ function parseDay(
   key: string
 ): Date {
   return new Date(`${key}T00:00:00.000Z`);
+}
+
+function executionPrice(
+  candle: Candle,
+  timing: ExecutionTiming
+): number {
+  return timing === "next-open"
+    ? candle.open
+    : candle.close;
 }
 
 export class MultiSymbolBacktestEngine {
@@ -204,6 +224,10 @@ export class MultiSymbolBacktestEngine {
       options.enterOnSelection ??
       true;
 
+    const timing =
+      options.executionTiming ??
+      "next-open";
+
     for (const day of tradingDays) {
       const asOfDate = parseDay(day);
 
@@ -221,6 +245,11 @@ export class MultiSymbolBacktestEngine {
           priorDate.getUTCDate() - 1
         );
 
+        const selectionAsOf =
+          timing === "same-close"
+            ? asOfDate
+            : priorDate;
+
         const lookbackDays =
           options.selectionLookbackDays ??
           options.selector?.lookbackDays ??
@@ -228,7 +257,7 @@ export class MultiSymbolBacktestEngine {
 
         const selection = options.selectAtDate
           ? options.selectAtDate(
-              priorDate,
+              selectionAsOf,
               candidates,
               candlesBySymbol,
               {
@@ -238,7 +267,7 @@ export class MultiSymbolBacktestEngine {
               }
             )
           : selectTopEtfsAtDate(
-              priorDate,
+              selectionAsOf,
               candidates,
               candlesBySymbol,
               {
@@ -319,7 +348,7 @@ export class MultiSymbolBacktestEngine {
                 position.symbol,
                 position.quantity,
                 candle,
-                candle.open,
+                executionPrice(candle, timing),
                 sellContext
               );
 
@@ -347,7 +376,7 @@ export class MultiSymbolBacktestEngine {
             const quantity =
               this.getAllocationLimitedQuantity(
                 portfolio,
-                candle.open,
+                executionPrice(candle, timing),
                 portfolio.getEquity(),
                 0
               );
@@ -375,7 +404,7 @@ export class MultiSymbolBacktestEngine {
                 symbol,
                 quantity,
                 candle,
-                candle.open,
+                executionPrice(candle, timing),
                 buyContext
               );
 
@@ -417,7 +446,8 @@ export class MultiSymbolBacktestEngine {
             portfolio,
             state.pendingOrder,
             candle,
-            activeSymbols.length
+            activeSymbols.length,
+            timing
           );
 
           const nextQuantity =
@@ -459,7 +489,7 @@ export class MultiSymbolBacktestEngine {
         const estimatedBuyQuantity =
           this.getAllocationLimitedQuantity(
             portfolio,
-            candle.open,
+            executionPrice(candle, timing),
             targetAllocation,
             position?.quantity ?? 0
           );
@@ -535,8 +565,14 @@ export class MultiSymbolBacktestEngine {
     portfolio: PortfolioSimulator,
     order: StrategyOrder,
     candle: Candle,
-    activeSymbolCount: number
+    activeSymbolCount: number,
+    timing: ExecutionTiming
   ): void {
+    const fillPrice = executionPrice(
+      candle,
+      timing
+    );
+
     if (order.side === "buy") {
       const targetAllocation =
         portfolio.getEquity() /
@@ -551,7 +587,7 @@ export class MultiSymbolBacktestEngine {
         order.quantity,
         this.getAllocationLimitedQuantity(
           portfolio,
-          candle.open,
+          fillPrice,
           targetAllocation,
           position?.quantity ?? 0
         )
@@ -562,7 +598,7 @@ export class MultiSymbolBacktestEngine {
           candle.symbol,
           quantity,
           candle,
-          candle.open,
+          fillPrice,
           {
             reason: "BUY_STRATEGY",
             detail: "Strategy buy signal"
@@ -591,7 +627,7 @@ export class MultiSymbolBacktestEngine {
         candle.symbol,
         quantity,
         candle,
-        candle.open,
+        fillPrice,
         {
           reason: "SELL_STRATEGY",
           detail: "Strategy sell signal"

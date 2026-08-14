@@ -4,6 +4,7 @@ node_modules/
 *.db-wal
 *.db-shm
 data/signal-state.json
+data/fill-journal.json
 data/COMMANDS.txt
 web/node_modules/
 web/.next/

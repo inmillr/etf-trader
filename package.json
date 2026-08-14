@@ -19,6 +19,7 @@
     "journal": "node --import=tsx src/scripts/dailyJournal.ts",
     "backtest": "node --import=tsx src/scripts/runAggressiveBacktest.ts",
     "backtest:aggressive": "node --import=tsx src/scripts/runAggressiveBacktest.ts",
+    "backtest:execution": "node --import=tsx src/scripts/compareExecutionTiming.ts",
     "backtest:hybrid": "node --import=tsx src/scripts/runHybridBacktest.ts",
     "sweep:aggressive": "node --import=tsx src/scripts/sweepAggressive.ts",
     "sweep:hybrid": "node --import=tsx src/scripts/sweepHybrid2026.ts",

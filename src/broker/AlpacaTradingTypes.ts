@@ -42,6 +42,7 @@ export interface AlpacaOrder {
   symbol: string;
   qty: string;
   filled_qty: string;
+  filled_avg_price?: string | null;
   side: "buy" | "sell";
   type: string;
   submitted_at: string;

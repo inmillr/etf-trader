@@ -9,17 +9,16 @@ import type {
   AutomationJob,
   AutomationJobRun,
   AutomationRunLogEntry,
+  AutomationSchedule,
   AutomationState,
   AutomationTrigger
 } from "./AutomationTypes.js";
+import { DEFAULT_AUTOMATION_SCHEDULE } from "./AutomationTypes.js";
 
 const DEFAULT_STATE: AutomationState = {
   enabled: false,
   schedule: {
-    backfillTimeEt: "16:00",
-    signalTimeEt: "16:05",
-    tradeTimeEt: "09:35",
-    timezone: "America/New_York"
+    ...DEFAULT_AUTOMATION_SCHEDULE
   },
   daemon: {
     pid: null,
@@ -53,10 +52,10 @@ export function loadAutomationState(
     return {
       ...DEFAULT_STATE,
       ...parsed,
-      schedule: {
+      schedule: migrateSchedule({
         ...DEFAULT_STATE.schedule,
         ...parsed.schedule
-      },
+      }),
       daemon: {
         ...DEFAULT_STATE.daemon,
         ...parsed.daemon
@@ -202,3 +201,15 @@ function formatEtDay(date: Date): string {
 }
 
 export { formatEtDay };
+
+function migrateSchedule(
+  schedule: AutomationSchedule
+): AutomationSchedule {
+  if (schedule.tradeTimeEt === "09:35") {
+    return {
+      ...DEFAULT_AUTOMATION_SCHEDULE
+    };
+  }
+
+  return schedule;
+}

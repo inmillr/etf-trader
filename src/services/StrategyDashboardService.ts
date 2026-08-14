@@ -267,6 +267,48 @@ export class StrategyDashboardService {
     }
   }
 
+  async getNextDailyClose(
+    symbol: string,
+    afterDay: string
+  ): Promise<{
+    date: string;
+    close: number;
+  } | null> {
+    const repository =
+      new SQLiteCandleRepository(
+        this.databasePath
+      );
+
+    try {
+      const candles =
+        await repository.getCandles({
+          symbol,
+          timeframe: "1d",
+          start: new Date(
+            `${afterDay}T00:00:00.000Z`
+          ),
+          end: new Date()
+        });
+
+      for (const candle of candles) {
+        const day = candle.timestamp
+          .toISOString()
+          .slice(0, 10);
+
+        if (day > afterDay) {
+          return {
+            date: day,
+            close: candle.close
+          };
+        }
+      }
+
+      return null;
+    } finally {
+      repository.close();
+    }
+  }
+
   async getLatestDataDate(): Promise<string | null> {
     const repository =
       new SQLiteCandleRepository(

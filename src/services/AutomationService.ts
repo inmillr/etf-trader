@@ -26,7 +26,8 @@ import {
   AlpacaTradingClient
 } from "../broker/AlpacaTradingClient.js";
 import {
-  PaperTradingRunner
+  PaperTradingRunner,
+  type PaperTradeRunResult
 } from "../broker/PaperTradingRunner.js";
 import {
   loadSignalState
@@ -34,6 +35,11 @@ import {
 import {
   assessSignalFreshness
 } from "../automation/SignalFreshness.js";
+import {
+  loadFillJournal,
+  recordTradeFills,
+  resolvePendingNextCloses
+} from "../automation/FillJournalStore.js";
 import { getAlpacaConfig } from "../config/AlpacaConfig.js";
 import {
   getTradingConfig
@@ -97,6 +103,7 @@ export class AutomationService {
       lastRuns: state.lastRuns,
       runLog: state.runLog.slice(0, 20),
       lastActionLog: state.lastActionLog,
+      fillJournal: loadFillJournal().slice(0, 20),
       env: {
         paperTradingEnabled:
           tradingConfig.paperTradingEnabled,
@@ -449,6 +456,16 @@ export class AutomationService {
           backfillResult
         );
 
+        if (backfillResult.success) {
+          await resolvePendingNextCloses(
+            (symbol, afterDay) =>
+              this.dashboard.getNextDailyClose(
+                symbol,
+                afterDay
+              )
+          );
+        }
+
         result = {
           success: backfillResult.success,
           message: backfillResult.message
@@ -485,6 +502,11 @@ export class AutomationService {
           "Preview Trade"
         );
 
+        await this.recordFills(
+          tradeResult,
+          trigger
+        );
+
         result = {
           success: tradeResult.success,
           message: tradeResult.message,
@@ -502,6 +524,11 @@ export class AutomationService {
         log = buildTradeActionLog(
           tradeResult,
           "Execute Trade"
+        );
+
+        await this.recordFills(
+          tradeResult,
+          trigger
         );
 
         result = {
@@ -556,6 +583,37 @@ export class AutomationService {
       success: detailed.success,
       message: detailed.message
     };
+  }
+
+  private async recordFills(
+    result: PaperTradeRunResult,
+    trigger: AutomationTrigger
+  ): Promise<void> {
+    if (!result.plan || result.plan.noTrade) {
+      return;
+    }
+
+    const priceBySymbol: Record<
+      string,
+      number | null
+    > = {};
+
+    for (const step of result.plan.steps) {
+      if (step.symbol in priceBySymbol) {
+        continue;
+      }
+
+      priceBySymbol[step.symbol] =
+        await this.dashboard.getLatestClose(
+          step.symbol
+        );
+    }
+
+    recordTradeFills(
+      result,
+      trigger,
+      priceBySymbol
+    );
   }
 
   async tick(): Promise<{

@@ -93,6 +93,22 @@ export interface AutomationRunLogEntry {
   message: string;
 }
 
+export interface FillJournalEntry {
+  id: string;
+  at: string;
+  day: string;
+  trigger: string;
+  mode: "dry-run" | "execute" | "offline";
+  signalAction: string;
+  side: "buy" | "sell";
+  symbol: string;
+  qty: number;
+  backtestPrice: number | null;
+  alpacaFillPrice: number | null;
+  nextClose: number | null;
+  nextCloseDate: string | null;
+}
+
 export interface AutomationStatusResponse {
   enabled: boolean;
   daemonRunning: boolean;
@@ -124,6 +140,7 @@ export interface AutomationStatusResponse {
     success: boolean;
     log: string[];
   } | null;
+  fillJournal: FillJournalEntry[];
   env: {
     paperTradingEnabled: boolean;
     alpacaPaper: boolean;

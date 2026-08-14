@@ -18,7 +18,7 @@ describe("SignalFreshness", () => {
       lastBackfillRun: null,
       lastTradeRun: null,
       marketOpen: true,
-      tradeTimeEt: "09:35"
+      tradeTimeEt: "15:55"
     });
 
     expect(result.isStale).toBe(true);
@@ -46,14 +46,14 @@ describe("SignalFreshness", () => {
       },
       lastTradeRun: null,
       marketOpen: true,
-      tradeTimeEt: "09:35",
+      tradeTimeEt: "15:55",
       now: new Date("2026-08-13T15:00:00.000Z")
     });
 
     expect(result.isStale).toBe(false);
     expect(result.canManualExecute).toBe(true);
     expect(result.manualExecuteHint).toContain(
-      "09:35"
+      "15:55"
     );
   });
 });

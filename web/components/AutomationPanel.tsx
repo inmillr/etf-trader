@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ActionButton } from "@/components/ActionButton";
 import { ActionLogModal } from "@/components/ActionLogModal";
+import { FillJournalTable } from "@/components/FillJournalTable";
 import type {
   AutomationControlResponse,
   AutomationStatusResponse
@@ -364,8 +365,8 @@ export function AutomationPanel() {
             <h2>Paper Automation</h2>
             <p className="muted">
               Daily aggressive momentum · scheduled
-              backfill 4:00 PM ET · signal 4:05 PM ET
-              · trade 9:35 AM ET
+              backfill 3:50 PM ET · signal 3:55 PM ET
+              · trade 3:55 PM ET (same session)
             </p>
           </div>
           {badge ? (
@@ -462,8 +463,9 @@ export function AutomationPanel() {
                   PAPER_TRADING_ENABLED=true
                 </code>{" "}
                 when ready for live paper orders.
-                All four steps run on schedule — no
-                daily clicks required.
+                Backfill, signal, and trade run in the
+                same afternoon before the close — no
+                overnight wait.
               </p>
               <div
                 className="button-row"
@@ -555,7 +557,7 @@ export function AutomationPanel() {
                 <WorkflowStep
                   step={1}
                   title="Update Market Data"
-                  when="Automatically at 4:00 PM ET when automation is on, or manually when SQLite is behind (yellow banner)."
+                  when="Automatically at 3:50 PM ET when automation is on, or manually when SQLite is behind (yellow banner)."
                   does="Downloads missing daily bars for all 30 ETFs from Alpaca (data API only — no orders). Takes about 1–2 minutes."
                   action="run-backfill"
                   buttonLabel="Update Market Data"
@@ -572,7 +574,7 @@ export function AutomationPanel() {
                 <WorkflowStep
                   step={2}
                   title="Run Signal Now"
-                  when="Automatically at 4:05 PM ET when automation is on, or manually when you want to refresh the signal."
+                  when="Automatically at 3:55 PM ET when automation is on, or manually when you want to refresh the signal."
                   does="Reads SQLite, computes aggressive momentum, and updates data/signal-state.json. No Alpaca trading calls."
                   action="run-signal"
                   buttonLabel="Run Signal Now"
@@ -598,7 +600,7 @@ export function AutomationPanel() {
                 <WorkflowStep
                   step={4}
                   title="Execute Trade (override)"
-                  when="Only when the signal is current and you want to trade now instead of waiting for the 9:35 AM ET scheduled run."
+                  when="Only when the signal is current and you want to trade now instead of waiting for the 3:55 PM ET scheduled run."
                   does="Submits market orders to Alpaca paper. Requires PAPER_TRADING_ENABLED=true. Blocked when the signal is stale."
                   action="run-trade-execute"
                   buttonLabel="Execute Trade (override)"
@@ -621,6 +623,19 @@ export function AutomationPanel() {
                   }}
                 />
               </div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <h3>Fill journal</h3>
+              <p className="muted">
+                Live Alpaca fill versus the SQLite
+                close the backtest would have used,
+                then the next session close once that
+                bar lands.
+              </p>
+              <FillJournalTable
+                entries={status.fillJournal ?? []}
+              />
             </div>
 
             <div style={{ marginTop: 16 }}>
