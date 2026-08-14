@@ -7,33 +7,57 @@
     "timezone": "America/New_York"
   },
   "daemon": {
-    "pid": null,
-    "startedAt": null,
-    "lastHeartbeat": null
+    "pid": 47142,
+    "startedAt": "2026-08-14T19:34:04.808Z",
+    "lastHeartbeat": "2026-08-14T20:31:08.236Z"
   },
   "lastRuns": {
     "backfill": {
-      "at": "2026-08-14T00:12:53.867Z",
-      "day": "2026-08-13",
+      "at": "2026-08-14T19:04:02.361Z",
+      "day": "2026-08-14",
       "success": true,
-      "message": "Downloaded 172 new daily bar(s) for 30/30 ETFs"
+      "message": "Downloaded 202 new daily bar(s) for 30/30 ETFs"
     },
     "signal": {
-      "at": "2026-08-14T00:13:24.469Z",
-      "day": "2026-08-13",
+      "at": "2026-08-14T19:04:28.941Z",
+      "day": "2026-08-14",
       "success": true,
       "message": "HOLD — Keep holding SMH.",
-      "signalDate": "2026-08-13"
+      "signalDate": "2026-08-14"
     },
     "trade": {
-      "at": "2026-08-13T23:50:25.834Z",
-      "day": "2026-08-13",
+      "at": "2026-08-14T19:55:06.873Z",
+      "day": "2026-08-14",
       "success": true,
       "message": "Signal is HOLD — no order required.",
       "mode": "dry-run"
     }
   },
   "runLog": [
+    {
+      "id": "1786737306873-trade-dry",
+      "at": "2026-08-14T19:55:06.873Z",
+      "job": "trade-dry",
+      "trigger": "scheduled",
+      "success": true,
+      "message": "Signal is HOLD — no order required."
+    },
+    {
+      "id": "1786734268943-signal",
+      "at": "2026-08-14T19:04:28.943Z",
+      "job": "signal",
+      "trigger": "manual",
+      "success": true,
+      "message": "HOLD — Keep holding SMH."
+    },
+    {
+      "id": "1786734242369-backfill",
+      "at": "2026-08-14T19:04:02.369Z",
+      "job": "backfill",
+      "trigger": "manual",
+      "success": true,
+      "message": "Downloaded 202 new daily bar(s) for 30/30 ETFs"
+    },
     {
       "id": "1786666404471-signal",
       "at": "2026-08-14T00:13:24.471Z",
@@ -164,21 +188,26 @@
     }
   ],
   "lastActionLog": {
-    "at": "2026-08-14T00:13:24.471Z",
-    "job": "signal",
+    "at": "2026-08-14T19:55:06.873Z",
+    "job": "trade-dry",
     "success": true,
     "log": [
-      "▶ Run Signal Now",
-      "Previous hold: SMH since 2026-08-13",
-      "Loaded SQLite daily bars through 2026-08-13",
-      "Evaluated aggressive dual momentum (30 ETFs · 10-day lookback · daily rebalance)",
-      "Action: HOLD",
-      "Target: SMH",
-      "Tracked hold: SMH",
+      "▶ Preview Trade",
+      "Signal (2026-08-14): HOLD",
       "Reason: Keep holding SMH.",
-      "Left data/signal-state.json unchanged",
-      "No Alpaca orders submitted (signal computation only)",
-      "✓ Done"
+      "Connected to Alpaca paper account (read-only for planning)",
+      "",
+      "Signal action: HOLD",
+      "Reason:        Keep holding SMH.",
+      "Broker:        flat (0 shares)",
+      "Target:        SMH",
+      "Trade:         SKIP — Signal is HOLD — no order required.",
+      "",
+      "Reference price (SMH): $584.56",
+      "",
+      "No orders needed — Signal is HOLD — no order required.",
+      "",
+      "✓ Signal is HOLD — no order required."
     ]
   }
 }

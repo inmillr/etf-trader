@@ -23,6 +23,21 @@ function formatTimestamp(
   );
 }
 
+function formatMoney(
+  value: number | null | undefined
+): string {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 function statusBadge(
   enabled: boolean,
   daemonRunning: boolean
@@ -452,6 +467,197 @@ export function AutomationPanel() {
                     : "Closed"}
                 </p>
               </div>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <h3>Account snapshot</h3>
+              <p className="muted">
+                Live Alpaca{" "}
+                {status.account?.snapshot?.mode ??
+                  (status.env.alpacaPaper
+                    ? "paper"
+                    : "live")}{" "}
+                account · refreshes every 15s
+              </p>
+
+              {status.account?.error ? (
+                <p className="error">
+                  {status.account.error}
+                </p>
+              ) : status.account?.snapshot ? (
+                <>
+                  <div
+                    className="grid grid-4"
+                    style={{ marginTop: 12 }}
+                  >
+                    <div>
+                      <p className="muted">
+                        Total balance
+                      </p>
+                      <p className="metric-value">
+                        {formatMoney(
+                          status.account.snapshot
+                            .total
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="muted">
+                        Invested
+                      </p>
+                      <p className="metric-value">
+                        {formatMoney(
+                          status.account.snapshot
+                            .invested
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="muted">Cash</p>
+                      <p className="metric-value">
+                        {formatMoney(
+                          status.account.snapshot
+                            .cash
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="muted">
+                        Buying power
+                      </p>
+                      <p className="metric-value">
+                        {formatMoney(
+                          status.account.snapshot
+                            .buyingPower
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="muted">
+                        Account status
+                      </p>
+                      <p className="metric-value">
+                        {
+                          status.account.snapshot
+                            .status
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <p className="muted">
+                        Broker position
+                      </p>
+                      <p className="metric-value">
+                        {status.account.snapshot
+                          .brokerSymbol
+                          ? `${status.account.snapshot.brokerSymbol} × ${status.account.snapshot.brokerQty}`
+                          : "Flat"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="muted">
+                        Strategy target
+                      </p>
+                      <p className="metric-value">
+                        {status.account.snapshot
+                          .strategySymbol
+                          ? `${status.account.snapshot.strategySymbol} since ${status.account.snapshot.strategySince}`
+                          : "Flat / cash"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="muted">
+                        In sync
+                      </p>
+                      <p
+                        className={`metric-value ${
+                          status.account.snapshot
+                            .alignedWithStrategy
+                            ? "positive"
+                            : "negative"
+                        }`}
+                      >
+                        {status.account.snapshot
+                          .alignedWithStrategy
+                          ? "Yes"
+                          : "No"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {status.account.snapshot.positions
+                    .length > 0 ? (
+                    <table
+                      style={{ marginTop: 12 }}
+                    >
+                      <thead>
+                        <tr>
+                          <th>Symbol</th>
+                          <th>Qty</th>
+                          <th>Avg entry</th>
+                          <th>Last</th>
+                          <th>Market value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {status.account.snapshot.positions.map(
+                          (position) => (
+                            <tr
+                              key={
+                                position.symbol
+                              }
+                            >
+                              <td>
+                                {position.symbol}
+                              </td>
+                              <td>
+                                {position.qty}
+                              </td>
+                              <td>
+                                {formatMoney(
+                                  position.avgEntryPrice
+                                )}
+                              </td>
+                              <td>
+                                {formatMoney(
+                                  position.currentPrice
+                                )}
+                              </td>
+                              <td>
+                                {formatMoney(
+                                  position.marketValue
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p
+                      className="muted"
+                      style={{ marginTop: 12 }}
+                    >
+                      No open positions — account is
+                      100% cash.
+                    </p>
+                  )}
+
+                  <p
+                    className="muted"
+                    style={{ marginTop: 8 }}
+                  >
+                    As of{" "}
+                    {formatTimestamp(
+                      status.account.snapshot.asOf
+                    )}
+                  </p>
+                </>
+              ) : (
+                <p className="muted">
+                  Loading account snapshot…
+                </p>
+              )}
             </div>
 
             <div style={{ marginTop: 20 }}>

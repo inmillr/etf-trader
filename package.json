@@ -27,7 +27,9 @@
     "backtest:intraday": "node --import=tsx src/scripts/runAdaptiveIntradayBacktest.ts",
     "backtest:dual-momentum": "node --import=tsx src/scripts/runAdaptiveBacktest.ts --compare",
     "dev:web": "npm run dev --prefix web",
-    "build:web": "npm run build --prefix web"
+    "dev:web:remote": "npm run dev:remote --prefix web",
+    "build:web": "npm run build --prefix web",
+    "start:web:remote": "npm run start:remote --prefix web"
   },
   "keywords": [],
   "author": "",

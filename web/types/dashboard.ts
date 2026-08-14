@@ -109,6 +109,37 @@ export interface FillJournalEntry {
   nextCloseDate: string | null;
 }
 
+export interface AccountPositionSnapshot {
+  symbol: string;
+  qty: number;
+  marketValue: number;
+  avgEntryPrice: number;
+  currentPrice: number;
+}
+
+export interface AccountSnapshot {
+  asOf: string;
+  mode: "paper" | "live";
+  status: string;
+  currency: string;
+  cash: number;
+  invested: number;
+  total: number;
+  buyingPower: number;
+  portfolioValue: number;
+  positions: AccountPositionSnapshot[];
+  strategySymbol: string | null;
+  strategySince: string | null;
+  brokerSymbol: string | null;
+  brokerQty: number;
+  alignedWithStrategy: boolean;
+}
+
+export interface AccountSnapshotResponse {
+  snapshot: AccountSnapshot | null;
+  error: string | null;
+}
+
 export interface AutomationStatusResponse {
   enabled: boolean;
   daemonRunning: boolean;
@@ -162,6 +193,7 @@ export interface AutomationStatusResponse {
     canManualExecute: boolean;
     manualExecuteHint: string | null;
   } | null;
+  account: AccountSnapshotResponse | null;
 }
 
 export interface AutomationControlResponse

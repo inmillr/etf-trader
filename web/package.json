@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "../scripts/with-inhibit.sh next dev --port 3000",
+    "dev:remote": "../scripts/with-inhibit.sh next dev --port 3000 -H 0.0.0.0",
     "build": "next build",
     "start": "../scripts/with-inhibit.sh next start --port 3000",
+    "start:remote": "../scripts/with-inhibit.sh next start --port 3000 -H 0.0.0.0",
     "lint": "next lint"
   },
   "dependencies": {

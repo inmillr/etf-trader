@@ -23,6 +23,9 @@ import type {
   AutomationTrigger
 } from "../automation/AutomationTypes.js";
 import {
+  buildAccountSnapshot
+} from "../broker/AccountSnapshot.js";
+import {
   AlpacaTradingClient
 } from "../broker/AlpacaTradingClient.js";
 import {
@@ -112,7 +115,8 @@ export class AutomationService {
           tradingConfig.allowLiveTrading
       },
       market: null,
-      signalFreshness: null
+      signalFreshness: null,
+      account: null
     };
   }
 
@@ -126,21 +130,48 @@ export class AutomationService {
 
     let market: AutomationStatusResponse["market"] =
       null;
+    let account: AutomationStatusResponse["account"] =
+      null;
+
+    const alpacaConfig = getAlpacaConfig();
+    const tradingConfig = getTradingConfig();
 
     try {
       const client = new AlpacaTradingClient(
-        getAlpacaConfig()
+        alpacaConfig
       );
 
-      const clock = await client.getClock();
+      const [clock, alpacaAccount, positions] =
+        await Promise.all([
+          client.getClock(),
+          client.getAccount(),
+          client.getPositions()
+        ]);
 
       market = {
         isOpen: clock.is_open,
         nextOpen: clock.next_open,
         nextClose: clock.next_close
       };
-    } catch {
+
+      account = {
+        snapshot: buildAccountSnapshot(
+          alpacaAccount,
+          positions,
+          alpacaConfig.paper ? "paper" : "live",
+          tradingConfig.signalStatePath
+        ),
+        error: null
+      };
+    } catch (error) {
       market = status.market;
+      account = {
+        snapshot: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not load Alpaca account"
+      };
     }
 
     const signalFreshness =
@@ -156,7 +187,8 @@ export class AutomationService {
     return {
       ...status,
       market,
-      signalFreshness
+      signalFreshness,
+      account
     };
   }
 
